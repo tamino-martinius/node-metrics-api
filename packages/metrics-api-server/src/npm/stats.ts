@@ -115,20 +115,16 @@ async function fetchDownloads(
       for (const name of chunk) result[name] = toMap(bulk?.[name] ?? null);
     }
   }
-  // Scoped packages can't be bulk-queried (npm rejects them in the comma-list form), so
-  // fetch them individually through a small worker pool: enough parallelism to finish a
-  // maintainer's full package list in reasonable time, low enough to stay under
-  // api.npmjs.org's per-IP rate limit on this endpoint (fetchJson retries transient 429s).
-  const SCOPED_CONCURRENCY = 6;
-  let cursor = 0;
-  const worker = async (): Promise<void> => {
-    while (cursor < scoped.length) {
-      const name = scoped[cursor++];
-      const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`;
-      result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(SCOPED_CONCURRENCY, scoped.length) }, worker));
+  // Scoped packages can't be bulk-queried (npm rejects them in the comma-list form). Any
+  // concurrency beyond 1 reliably trips api.npmjs.org's per-IP rate limit for a maintainer
+  // with 100+ scoped packages, so fetch them strictly one at a time with a small pacing
+  // delay between requests; fetchJson's retry/backoff absorbs any remaining transient 429s.
+  const REQUEST_SPACING_MS = 100;
+  for (const name of scoped) {
+    const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`;
+    result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
+    await sleep(REQUEST_SPACING_MS);
+  }
   return result;
 }
 
