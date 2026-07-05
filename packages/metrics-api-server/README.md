@@ -61,7 +61,8 @@ const stats = await fetchNpmStats('sindresorhus', { months: 6 });
 
 Wraps a scraper call into a Web-standard `(Request) => Promise<Response>` handler: validates the
 `user` query param, maps thrown errors to status codes, and sets the response `cache-control`
-header. This is what each function in this repo's `api/` directory uses.
+header. This is what each function in this repo's `api/` directory uses. Every response also
+carries `access-control-allow-origin: *`, so the endpoints can be called directly from browsers.
 
 ```ts
 import { createUserHandler, isValidGithubUsername, scrapeGithubProfile } from 'metrics-api-server';

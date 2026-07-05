@@ -27,6 +27,7 @@ export function createUserHandler<T>(
       return json(await fn({ user, url }), 200, 'public, s-maxage=3600, stale-while-revalidate=86400');
     } catch (error) {
       if (error instanceof UserNotFoundError) return json({ error: error.message }, 404, 'public, s-maxage=300');
+      console.error('[metrics-api]', error);
       if (error instanceof ScrapeError) return json({ error: error.message }, 502, 'no-store');
       return json({ error: 'internal error' }, 500, 'no-store');
     }
@@ -41,7 +42,8 @@ export function parseYears(url: URL): 'all' | 'last' | number[] {
     .split(',')
     .map(Number)
     .filter((year) => Number.isInteger(year) && year >= 2005 && year <= 2100);
-  return years.length > 0 ? years : 'all';
+  const unique = [...new Set(years)].slice(0, 30);
+  return unique.length > 0 ? unique : 'all';
 }
 
 export function parseMonths(url: URL): number {

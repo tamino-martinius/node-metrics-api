@@ -44,7 +44,8 @@ Successful responses are edge-cached for 1 hour with a 24-hour stale-while-reval
 (`cache-control: public, s-maxage=3600, stale-while-revalidate=86400`), so repeated requests for
 the same user are cheap and don't hammer GitHub/npm. A "user not found" (404) is cached for 5
 minutes (`public, s-maxage=300`); validation errors (400) and upstream scrape failures (502) are
-never cached (`no-store`).
+never cached (`no-store`). Every response also carries `access-control-allow-origin: *`, so the
+endpoints can be called directly from browsers.
 
 ## Self-hosting
 
