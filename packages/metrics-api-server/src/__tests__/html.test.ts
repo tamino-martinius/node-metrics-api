@@ -9,6 +9,12 @@ describe('attr', () => {
     expect(attr(tag, 'id')).toBe('c-0-1');
     expect(attr(tag, 'missing')).toBe(null);
   });
+  it('does not match a bare name inside a hyphenated attribute', () => {
+    const tag = '<td data-level="2" data-date="2024-03-02">';
+    expect(attr(tag, 'level')).toBe(null);
+    expect(attr(tag, 'date')).toBe(null);
+    expect(attr(tag, 'data-level')).toBe('2');
+  });
 });
 
 describe('decodeEntities', () => {

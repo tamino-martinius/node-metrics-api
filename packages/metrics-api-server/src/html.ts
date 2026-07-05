@@ -1,7 +1,7 @@
 import { ScrapeError } from './errors.js';
 
 export const attr = (tag: string, name: string): string | null => {
-  const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
+  const match = tag.match(new RegExp(`(?<![\\w-])${name}="([^"]*)"`));
   return match ? match[1] : null;
 };
 
