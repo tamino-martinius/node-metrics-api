@@ -32,7 +32,11 @@ const ALPHA_DOC = {
 const BETA_DOC = {
   name: '@scope/beta',
   'dist-tags': { latest: '0.1.0' },
-  time: { created: '2024-06-01T00:30:00.000Z', modified: '2024-06-01T00:30:00.000Z', '0.1.0': '2024-06-01T00:30:00.000Z' },
+  time: {
+    created: '2024-06-01T00:30:00.000Z',
+    modified: '2024-06-01T00:30:00.000Z',
+    '0.1.0': '2024-06-01T00:30:00.000Z',
+  },
 };
 
 const routes: Record<string, unknown> = {
@@ -42,7 +46,10 @@ const routes: Record<string, unknown> = {
   // A single-package request returns npm's SINGLE shape (bulk keyed shape only for comma lists).
   'https://api.npmjs.org/downloads/range/2025-07-03:2026-07-03/alpha': {
     package: 'alpha',
-    downloads: [{ day: '2026-06-01', downloads: 10 }, { day: '2026-06-02', downloads: 0 }],
+    downloads: [
+      { day: '2026-06-01', downloads: 10 },
+      { day: '2026-06-02', downloads: 0 },
+    ],
   },
   'https://api.npmjs.org/downloads/range/2025-07-03:2026-07-03/@scope/beta': {
     downloads: [{ day: '2026-06-01', downloads: 3 }],

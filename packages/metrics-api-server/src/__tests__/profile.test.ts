@@ -25,7 +25,11 @@ describe('parseProfileHtml', () => {
       followerCount: 1200,
       followingCount: 7,
       organizations: [
-        { name: 'github', avatarUrl: 'https://avatars.githubusercontent.com/u/9919?s=64&v=4', url: 'https://github.com/github' },
+        {
+          name: 'github',
+          avatarUrl: 'https://avatars.githubusercontent.com/u/9919?s=64&v=4',
+          url: 'https://github.com/github',
+        },
       ],
     });
   });

@@ -135,9 +135,7 @@ export async function fetchNpmStats(
   const names = found.map((object) => object.package.name);
   const [docs, downloads] = await Promise.all([
     Promise.all(
-      names.map((name) =>
-        fetchJson<RegistryDoc>(`https://registry.npmjs.org/${name.replace('/', '%2F')}`, fetchFn),
-      ),
+      names.map((name) => fetchJson<RegistryDoc>(`https://registry.npmjs.org/${name.replace('/', '%2F')}`, fetchFn)),
     ),
     fetchDownloads(names, window, fetchFn),
   ]);

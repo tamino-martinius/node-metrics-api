@@ -50,8 +50,10 @@ const stubFetch = (routes: Record<string, string | number>): typeof fetch =>
 describe('scrapeGithubContributions', () => {
   it('scrapes explicit years, filters foreign dates, sums totals', async () => {
     const fetchFn = stubFetch({
-      'https://github.com/users/octocat/contributions?from=2024-01-01&to=2024-12-31':
-        CALENDAR_HTML.replace('2024-03-01', '2023-12-31'), // foreign-year cell must be dropped
+      'https://github.com/users/octocat/contributions?from=2024-01-01&to=2024-12-31': CALENDAR_HTML.replace(
+        '2024-03-01',
+        '2023-12-31',
+      ), // foreign-year cell must be dropped
     });
     const result = await scrapeGithubContributions('octocat', { years: [2024], fetchFn });
     expect(result.total).toEqual({ '2024': 1029 });
