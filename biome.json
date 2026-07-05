@@ -1,0 +1,9 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "files": {
+    "includes": ["**", "!**/dist", "!**/fixtures", "!pnpm-lock.yaml"]
+  },
+  "formatter": { "enabled": true, "indentStyle": "space", "lineWidth": 120 },
+  "javascript": { "formatter": { "quoteStyle": "single" } },
+  "linter": { "enabled": true, "rules": { "recommended": true } }
+}

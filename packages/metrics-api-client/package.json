@@ -1,0 +1,44 @@
+{
+  "name": "metrics-api-client",
+  "version": "0.0.0",
+  "description": "Typed client for a hosted metrics-api-server (default https://metrics-api.tamino.dev)",
+  "author": "Tamino Martinius <dev@zaku.eu>",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/**/__tests__",
+    "!dist/**/*.map"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamino-martinius/node-metrics-api.git",
+    "directory": "packages/metrics-api-client"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "build": "pnpm clean && tsc",
+    "prepack": "pnpm build"
+  },
+  "dependencies": {
+    "metrics-api-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

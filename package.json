@@ -1,0 +1,33 @@
+{
+  "name": "metrics-api-monorepo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Monorepo for metrics-api-server and metrics-api-client",
+  "author": "Tamino Martinius <dev@zaku.eu>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamino-martinius/node-metrics-api.git"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@9.12.0",
+  "scripts": {
+    "build": "pnpm -r --filter './packages/*' run build",
+    "test": "pnpm -r --filter './packages/*' run test",
+    "test:live": "pnpm --filter metrics-api-server run test:live",
+    "typecheck": "pnpm -r --filter './packages/*' run typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "test:release": "node --test .github/scripts/*.test.mjs",
+    "ci": "pnpm lint && pnpm build && pnpm typecheck && pnpm test"
+  },
+  "dependencies": {
+    "metrics-api-server": "workspace:*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.10",
+    "typescript": "^6.0.3"
+  }
+}
