@@ -79,8 +79,8 @@ scripts/
   update-fixtures.mjs        refresh the committed real-markup test fixtures
 .github/workflows/
   ci.yml                     lint + build + typecheck + test + release-script tests, on push/PR
-  nightly-smoke.yml          live canary against real GitHub/npm (see below)
-  release.yml                manual dispatch release flow (see Releasing)
+  nightly-smoke.yml          live canary against real GitHub/npm
+  release.yml                manual dispatch release flow
 vercel.json                  install/build commands + clean-URL rewrites
 ```
 
@@ -89,29 +89,7 @@ vercel.json                  install/build commands + clean-URL rewrites
 ```bash
 pnpm install                        # install workspace deps
 pnpm run ci                             # lint + build + typecheck + test (what CI runs)
-pnpm test:live                      # live suite against real github.com/npm (see canary below)
+pnpm test:live                      # live suite against real github.com/npm
 node scripts/update-fixtures.mjs [user]   # refresh committed HTML fixtures (default user: tamino-martinius)
 pnpm test:release                   # unit tests for the release-workflow scripts
 ```
-
-## Nightly canary
-
-`nightly-smoke.yml` runs `pnpm test:live` against real github.com and npm registry/downloads APIs
-on a schedule (plus manual dispatch), so a GitHub markup change or npm API change is caught within
-a day instead of silently breaking production responses. It's separate from `ci.yml`'s fixture-based
-unit tests, which stay fast and deterministic on every push/PR.
-
-## Deployment (owner steps)
-
-1. vercel.com → Add New Project → import `tamino-martinius/node-metrics-api` (defaults; vercel.json drives install/build).
-2. Project → Settings → Domains → add `metrics-api.tamino.dev`.
-3. DNS: CNAME `metrics-api` → `cname.vercel-dns.com`.
-4. Verify: `curl https://metrics-api.tamino.dev/github/tamino-martinius/profile`.
-
-## Releasing
-
-Dispatch **Actions → Release** on `main` with a semver version (no leading `v`).
-Notes come from each package's `HISTORY.md` `## vNext` section; stable releases roll it to `## v<version>`.
-
-One-time setup (after the repo is public — npm provenance requires a public repo):
-- Register npm Trusted Publishers for `metrics-api-server` and `metrics-api-client` pointing at this repo + `release.yml`.

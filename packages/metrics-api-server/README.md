@@ -90,9 +90,8 @@ Vercel functions do, if you're building your own handler around these scrapers.
   parser expects (missing expected markup, unexpected HTTP status, unparseable count, etc.). All
   scraping here is regex-based, not a full HTML parser or headless browser — deliberately, to stay
   dependency-free and fast — which means a GitHub or npm markup change can surface as a
-  `ScrapeError` instead of silently wrong data. The nightly live canary (see root README) exists to
-  catch that quickly; `scripts/update-fixtures.mjs` refreshes the committed test fixtures once a
-  fix ships.
+  `ScrapeError` instead of silently wrong data. The nightly live canary exists to catch that
+  quickly; `scripts/update-fixtures.mjs` refreshes the committed test fixtures once a fix ships.
 
 ## Injectable `fetchFn`
 
@@ -117,5 +116,5 @@ pacing/backoff against npm's per-IP rate limits on the downloads endpoint (see s
 
 ```bash
 pnpm test        # fixture-based unit tests (fast, deterministic, what CI runs)
-pnpm test:live   # live suite against real github.com and npm — see root README's canary section
+pnpm test:live   # live suite against real github.com and npm
 ```
