@@ -48,4 +48,15 @@ describe('parseProfileHtml', () => {
   it('throws when the avatar anchor is missing', () => {
     expect(() => parseProfileHtml('<html><body>broken</body></html>', 'x')).toThrow(/markup/);
   });
+
+  it('does not cross anchor boundaries when a count span is missing', () => {
+    const html = `<html><head><meta property="og:image" content="https://avatars.githubusercontent.com/u/1?v=4"></head>
+      <body><span class="p-name vcard-fullname d-block" itemprop="name">X</span>
+      <a href="https://github.com/x?tab=followers">no count here</a>
+      <a href="https://github.com/x?tab=following"><span class="text-bold color-fg-default">99</span> following</a>
+      </body></html>`;
+    const profile = parseProfileHtml(html, 'x');
+    expect(profile.followerCount).toBe(0);
+    expect(profile.followingCount).toBe(99);
+  });
 });

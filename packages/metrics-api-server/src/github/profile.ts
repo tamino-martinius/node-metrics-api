@@ -4,7 +4,7 @@ import type { FetchFn, GithubOrganization, GithubProfile } from '../types.js';
 import { fetchGithubHtml } from './fetch.js';
 
 const socialCount = (squashed: string, tab: 'followers' | 'following'): number => {
-  const pattern = new RegExp(`tab=${tab}"[^>]*>.*?<span class="text-bold[^"]*">([^<]+)</span>`);
+  const pattern = new RegExp(`tab=${tab}"[^>]*>(?:(?!</?a\\b).)*?<span class="text-bold[^"]*">([^<]+)</span>`);
   const match = squashed.match(pattern);
   return match ? parseCount(match[1]) : 0;
 };
