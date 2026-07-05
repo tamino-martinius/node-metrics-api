@@ -63,6 +63,9 @@ describe('downloadWindow', () => {
   it('clamps to the npm epoch', () => {
     expect(downloadWindow(new Date('2015-03-01T00:00:00Z'), 12).start).toBe('2015-01-10');
   });
+  it('clamps to the last day of shorter target months instead of overflowing', () => {
+    expect(downloadWindow(new Date('2026-04-01T00:00:00Z'), 1)).toEqual({ start: '2026-02-28', end: '2026-03-31' });
+  });
 });
 
 describe('fetchNpmStats', () => {

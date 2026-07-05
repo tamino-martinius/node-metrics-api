@@ -11,7 +11,11 @@ export function downloadWindow(now: Date, months: number): { start: string; end:
   const end = new Date(now);
   end.setUTCDate(end.getUTCDate() - 1); // download data lags a day
   const start = new Date(end);
+  const day = start.getUTCDate();
+  start.setUTCDate(1);
   start.setUTCMonth(start.getUTCMonth() - months);
+  const lastDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
+  start.setUTCDate(Math.min(day, lastDay));
   const startKey = dateKey(start) < NPM_EPOCH ? NPM_EPOCH : dateKey(start);
   return { start: startKey, end: dateKey(end) };
 }
