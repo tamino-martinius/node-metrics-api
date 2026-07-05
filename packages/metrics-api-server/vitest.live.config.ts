@@ -5,7 +5,7 @@ export default defineConfig({
     include: ['src/**/*.live.test.ts'],
     // npm's downloads-range API rate-limits scoped-package lookups fairly aggressively;
     // maintainers with many scoped packages need backoff headroom beyond a typical 30s budget.
-    testTimeout: 120_000,
+    testTimeout: 180_000,
     passWithNoTests: true,
   },
 });
