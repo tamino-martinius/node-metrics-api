@@ -10,3 +10,11 @@ Deployed at https://metrics-api.tamino.dev via Vercel.
 2. Project → Settings → Domains → add `metrics-api.tamino.dev`.
 3. DNS: CNAME `metrics-api` → `cname.vercel-dns.com`.
 4. Verify: `curl https://metrics-api.tamino.dev/github/tamino-martinius/profile`.
+
+## Releasing
+
+Dispatch **Actions → Release** on `main` with a semver version (no leading `v`).
+Notes come from each package's `HISTORY.md` `## vNext` section; stable releases roll it to `## v<version>`.
+
+One-time setup (after the repo is public — npm provenance requires a public repo):
+- Register npm Trusted Publishers for `metrics-api-server` and `metrics-api-client` pointing at this repo + `release.yml`.
