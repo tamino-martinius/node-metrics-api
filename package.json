@@ -5,6 +5,7 @@
   "description": "Monorepo for metrics-api-server and metrics-api-client",
   "author": "Tamino Martinius <dev@zaku.eu>",
   "license": "MIT",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/tamino-martinius/node-metrics-api.git"
