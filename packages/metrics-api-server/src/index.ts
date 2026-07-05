@@ -4,5 +4,6 @@ export * from './github/fetch.js';
 export * from './github/profile.js';
 export * from './github/repos.js';
 export * from './html.js';
+export * from './npm/stats.js';
 export * from './types.js';
 export * from './validate.js';
