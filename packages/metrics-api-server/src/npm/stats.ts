@@ -22,11 +22,11 @@ export function downloadWindow(now: Date, months: number): { start: string; end:
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 6): Promise<T | null> {
+async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 4): Promise<T | null> {
   const response = await fetchFn(url);
   if (response.status === 404) return null;
   if (response.status === 429 && retriesLeft > 0) {
-    await sleep(500 * 2 ** (6 - retriesLeft));
+    await sleep(400 * 2 ** (4 - retriesLeft));
     return fetchJson<T>(url, fetchFn, retriesLeft - 1);
   }
   if (!response.ok) throw new ScrapeError(`npm returned ${response.status} for ${url}`);
@@ -115,22 +115,13 @@ async function fetchDownloads(
       for (const name of chunk) result[name] = toMap(bulk?.[name] ?? null);
     }
   }
-  // Scoped packages can't be bulk-queried, so fetch them individually with bounded
-  // concurrency: fast enough to avoid test/CI timeouts, gentle enough to avoid 429s.
-  const SCOPED_CONCURRENCY = 3;
-  for (let i = 0; i < scoped.length; i += SCOPED_CONCURRENCY) {
-    const chunk = scoped.slice(i, i + SCOPED_CONCURRENCY);
-    const ranges = await Promise.all(
-      chunk.map((name) =>
-        fetchJson<DownloadRange>(
-          `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`,
-          fetchFn,
-        ),
-      ),
-    );
-    chunk.forEach((name, index) => {
-      result[name] = toMap(ranges[index]);
-    });
+  // Scoped packages can't be bulk-queried (npm rejects them in the comma-list form), so
+  // fetch them one at a time. api.npmjs.org rate-limits this endpoint per IP hard enough
+  // that even modest concurrency trips 429s once a maintainer has ~100+ scoped packages,
+  // so we go fully sequential and let fetchJson's retry/backoff absorb transient limits.
+  for (const name of scoped) {
+    const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`;
+    result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
   }
   return result;
 }
