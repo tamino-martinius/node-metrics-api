@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>metrics-api</title>
+    <meta
+      name="description"
+      content="Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 46rem;
+        padding: 3rem 1.25rem;
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      h1 {
+        margin: 0 0 0.25rem;
+        font-size: 1.6rem;
+      }
+      p.lead {
+        margin: 0 0 2rem;
+        opacity: 0.75;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.55rem 0.5rem;
+        border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+        vertical-align: top;
+      }
+      th {
+        opacity: 0.6;
+        font-weight: 600;
+      }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 0.9em;
+      }
+      footer {
+        margin-top: 2.5rem;
+        font-size: 0.9rem;
+        opacity: 0.75;
+      }
+      a {
+        color: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>metrics-api</h1>
+    <p class="lead">
+      Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON — no
+      tokens, no auth.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Returns</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>GET /github/:user/contributions</code></td>
+          <td>per-day contribution counts + totals per year</td>
+        </tr>
+        <tr>
+          <td><code>GET /github/:user/profile</code></td>
+          <td>name, bio, avatar, follower/following counts, orgs</td>
+        </tr>
+        <tr>
+          <td><code>GET /github/:user/repos</code></td>
+          <td>public repos with stars, forks, language</td>
+        </tr>
+        <tr>
+          <td><code>GET /npm/:user</code></td>
+          <td>packages with publish history + windowed daily downloads</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>
+      <a href="https://github.com/tamino-martinius/node-metrics-api">Source &amp; documentation on GitHub</a>
+    </footer>
+  </body>
+</html>

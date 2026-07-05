@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "pnpm install",
-  "buildCommand": "pnpm --filter metrics-api-server build && mkdir -p public",
+  "buildCommand": "pnpm --filter metrics-api-server build",
   "rewrites": [
     { "source": "/github/:user/contributions", "destination": "/api/github/contributions?user=:user" },
     { "source": "/github/:user/profile", "destination": "/api/github/profile?user=:user" },
