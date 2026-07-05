@@ -87,7 +87,7 @@ vercel.json                  install/build commands + clean-URL rewrites
 
 ```bash
 pnpm install                        # install workspace deps
-pnpm ci                             # lint + build + typecheck + test (what CI runs)
+pnpm run ci                             # lint + build + typecheck + test (what CI runs)
 pnpm test:live                      # live suite against real github.com/npm (see canary below)
 node scripts/update-fixtures.mjs [user]   # refresh committed HTML fixtures (default user: tamino-martinius)
 pnpm test:release                   # unit tests for the release-workflow scripts
