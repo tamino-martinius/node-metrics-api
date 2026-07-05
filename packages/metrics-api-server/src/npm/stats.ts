@@ -4,6 +4,13 @@ import type { FetchFn, NpmPackageDetails, NpmPackageStats, NpmStats } from '../t
 const NPM_EPOCH = '2015-01-10';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 const BULK_LIMIT = 128;
+// ms between paced scoped-package download requests.
+const DEFAULT_SPACING_MS = 500;
+// base ms for 429 exponential backoff (doubles per retry attempt).
+const DEFAULT_BACKOFF_BASE_MS = 5_000;
+// total ms of 429-backoff sleeping allowed per fetchNpmStats call before aborting; stays
+// well under the live suite's 480s testTimeout.
+const DEFAULT_RATE_LIMIT_BUDGET_MS = 240_000;
 
 const dateKey = (date: Date): string => date.toISOString().slice(0, 10);
 
@@ -22,14 +29,31 @@ export function downloadWindow(now: Date, months: number): { start: string; end:
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 5): Promise<T | null> {
+/** Shared mutable tracker so serial requests within one fetchNpmStats call share a rate-limit budget. */
+interface RateLimitBudget {
+  totalMs: number;
+  remainingMs: number;
+}
+
+async function fetchJson<T>(
+  url: string,
+  fetchFn: FetchFn,
+  budget: RateLimitBudget,
+  backoffBaseMs: number,
+  retriesLeft = 5,
+): Promise<T | null> {
   const response = await fetchFn(url);
   if (response.status === 404) return null;
   if (response.status === 429 && retriesLeft > 0) {
     // api.npmjs.org's downloads endpoint enforces a tight sliding-window limit per IP;
     // a real cooldown (not a quick doubling backoff) is needed for the window to clear.
-    await sleep(5_000 * 2 ** (5 - retriesLeft));
-    return fetchJson<T>(url, fetchFn, retriesLeft - 1);
+    const delay = backoffBaseMs * 2 ** (5 - retriesLeft);
+    if (delay > budget.remainingMs) {
+      throw new ScrapeError(`npm rate limit backoff exceeded the ${budget.totalMs}ms budget while fetching ${url}`);
+    }
+    budget.remainingMs -= delay;
+    await sleep(delay);
+    return fetchJson<T>(url, fetchFn, budget, backoffBaseMs, retriesLeft - 1);
   }
   if (!response.ok) throw new ScrapeError(`npm returned ${response.status} for ${url}`);
   return (await response.json()) as T;
@@ -39,11 +63,16 @@ interface SearchObject {
   package: { name: string; links?: NpmPackageDetails['links'] };
 }
 
-async function searchPackages(user: string, fetchFn: FetchFn): Promise<SearchObject[]> {
+async function searchPackages(
+  user: string,
+  fetchFn: FetchFn,
+  budget: RateLimitBudget,
+  backoffBaseMs: number,
+): Promise<SearchObject[]> {
   const objects: SearchObject[] = [];
   for (let from = 0; from < 1000; from += 250) {
     const url = `https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(`maintainer:${user}`)}&size=250&from=${from}`;
-    const page = await fetchJson<{ objects: SearchObject[] }>(url, fetchFn);
+    const page = await fetchJson<{ objects: SearchObject[] }>(url, fetchFn, budget, backoffBaseMs);
     if (!page) break;
     objects.push(...page.objects);
     if (page.objects.length < 250) break;
@@ -94,6 +123,9 @@ async function fetchDownloads(
   names: string[],
   window: { start: string; end: string },
   fetchFn: FetchFn,
+  budget: RateLimitBudget,
+  backoffBaseMs: number,
+  spacingMs: number,
 ): Promise<Record<string, Record<string, number>>> {
   const result: Record<string, Record<string, number>> = {};
   const toMap = (range: DownloadRange): Record<string, number> => {
@@ -111,9 +143,9 @@ async function fetchDownloads(
     const chunk = unscoped.slice(i, i + BULK_LIMIT);
     const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${chunk.join(',')}`;
     if (chunk.length === 1) {
-      result[chunk[0]] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
+      result[chunk[0]] = toMap(await fetchJson<DownloadRange>(url, fetchFn, budget, backoffBaseMs));
     } else {
-      const bulk = await fetchJson<Record<string, DownloadRange>>(url, fetchFn);
+      const bulk = await fetchJson<Record<string, DownloadRange>>(url, fetchFn, budget, backoffBaseMs);
       for (const name of chunk) result[name] = toMap(bulk?.[name] ?? null);
     }
   }
@@ -121,11 +153,10 @@ async function fetchDownloads(
   // concurrency beyond 1 reliably trips api.npmjs.org's per-IP rate limit for a maintainer
   // with 100+ scoped packages, so fetch them strictly one at a time with a small pacing
   // delay between requests; fetchJson's retry/backoff absorbs any remaining transient 429s.
-  const REQUEST_SPACING_MS = 500;
   for (const name of scoped) {
     const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`;
-    result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
-    await sleep(REQUEST_SPACING_MS);
+    result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn, budget, backoffBaseMs));
+    if (spacingMs > 0) await sleep(spacingMs);
   }
   return result;
 }
@@ -134,13 +165,27 @@ export interface NpmStatsOptions {
   months?: number;
   fetchFn?: FetchFn;
   now?: Date;
+  /** ms between paced scoped-package download requests (default 500) */
+  spacingMs?: number;
+  /** base ms for 429 exponential backoff (default 5_000; doubles per attempt) */
+  backoffBaseMs?: number;
+  /** total ms of 429-backoff sleeping allowed per fetchNpmStats call before aborting (default 240_000) */
+  rateLimitBudgetMs?: number;
 }
 
 export async function fetchNpmStats(
   user: string,
-  { months = 12, fetchFn = fetch, now = new Date() }: NpmStatsOptions = {},
+  {
+    months = 12,
+    fetchFn = fetch,
+    now = new Date(),
+    spacingMs = DEFAULT_SPACING_MS,
+    backoffBaseMs = DEFAULT_BACKOFF_BASE_MS,
+    rateLimitBudgetMs = DEFAULT_RATE_LIMIT_BUDGET_MS,
+  }: NpmStatsOptions = {},
 ): Promise<NpmStats> {
-  const found = await searchPackages(user, fetchFn);
+  const budget: RateLimitBudget = { totalMs: rateLimitBudgetMs, remainingMs: rateLimitBudgetMs };
+  const found = await searchPackages(user, fetchFn, budget, backoffBaseMs);
   if (found.length === 0) {
     return { user: { username: user, versionsPerDate: {}, versionsPerHour: {} }, packages: [] };
   }
@@ -149,9 +194,16 @@ export async function fetchNpmStats(
   const names = found.map((object) => object.package.name);
   const [docs, downloads] = await Promise.all([
     Promise.all(
-      names.map((name) => fetchJson<RegistryDoc>(`https://registry.npmjs.org/${name.replace('/', '%2F')}`, fetchFn)),
+      names.map((name) =>
+        fetchJson<RegistryDoc>(
+          `https://registry.npmjs.org/${name.replace('/', '%2F')}`,
+          fetchFn,
+          budget,
+          backoffBaseMs,
+        ),
+      ),
     ),
-    fetchDownloads(names, window, fetchFn),
+    fetchDownloads(names, window, fetchFn, budget, backoffBaseMs, spacingMs),
   ]);
 
   const userVersions: VersionTimes = { versionsPerDate: {}, versionsPerHour: {} };

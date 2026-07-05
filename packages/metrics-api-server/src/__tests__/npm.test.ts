@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { ScrapeError } from '../errors.js';
 import { downloadWindow, fetchNpmStats } from '../npm/stats.js';
 
 const NOW = new Date('2026-07-04T10:00:00Z');
@@ -77,7 +78,7 @@ describe('downloadWindow', () => {
 
 describe('fetchNpmStats', () => {
   it('aggregates packages, versions and downloads', async () => {
-    const stats = await fetchNpmStats('octocat', { fetchFn: stubFetch, now: NOW });
+    const stats = await fetchNpmStats('octocat', { fetchFn: stubFetch, now: NOW, spacingMs: 0 });
     expect(stats.user.username).toBe('octocat');
     expect(stats.packages).toHaveLength(2);
 
@@ -109,7 +110,38 @@ describe('fetchNpmStats', () => {
   it('returns empty stats for a maintainer without packages', async () => {
     const emptyFetch = (async () =>
       new Response(JSON.stringify({ total: 0, objects: [] }), { status: 200 })) as typeof fetch;
-    const stats = await fetchNpmStats('nobody', { fetchFn: emptyFetch, now: NOW });
+    const stats = await fetchNpmStats('nobody', { fetchFn: emptyFetch, now: NOW, spacingMs: 0 });
     expect(stats).toEqual({ user: { username: 'nobody', versionsPerDate: {}, versionsPerHour: {} }, packages: [] });
+  });
+
+  it('aborts with a rate-limit ScrapeError once the backoff budget is exhausted', async () => {
+    const rateLimitedFetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith('https://api.npmjs.org/downloads/range/')) {
+        return new Response('rate limited', { status: 429 });
+      }
+      const body = routes[url];
+      if (body === undefined) throw new Error(`unexpected fetch: ${url}`);
+      return new Response(JSON.stringify(body), { status: 200 });
+    }) as typeof fetch;
+
+    await expect(
+      fetchNpmStats('octocat', {
+        fetchFn: rateLimitedFetch,
+        now: NOW,
+        spacingMs: 0,
+        backoffBaseMs: 1,
+        rateLimitBudgetMs: 5,
+      }),
+    ).rejects.toThrow(ScrapeError);
+    await expect(
+      fetchNpmStats('octocat', {
+        fetchFn: rateLimitedFetch,
+        now: NOW,
+        spacingMs: 0,
+        backoffBaseMs: 1,
+        rateLimitBudgetMs: 5,
+      }),
+    ).rejects.toThrow(/rate limit/);
   });
 });
