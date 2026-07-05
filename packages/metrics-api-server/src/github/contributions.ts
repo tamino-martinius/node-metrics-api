@@ -32,7 +32,7 @@ export function parseYearLinks(html: string): number[] {
 }
 
 export async function fetchAvailableYears(user: string, fetchFn: FetchFn = fetch): Promise<number[]> {
-  const html = await fetchGithubHtml(`https://github.com/${user}?tab=contributions`, user, fetchFn);
+  const html = await fetchGithubHtml(`https://github.com/${user}?tab=contributions`, user, fetchFn, { xhr: true });
   return parseYearLinks(html);
 }
 
