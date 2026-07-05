@@ -3,7 +3,9 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['src/**/*.live.test.ts'],
-    testTimeout: 30_000,
+    // npm's downloads-range API rate-limits scoped-package lookups fairly aggressively;
+    // maintainers with many scoped packages need backoff headroom beyond a typical 30s budget.
+    testTimeout: 120_000,
     passWithNoTests: true,
   },
 });

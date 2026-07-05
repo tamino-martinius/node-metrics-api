@@ -22,11 +22,11 @@ export function downloadWindow(now: Date, months: number): { start: string; end:
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 5): Promise<T | null> {
+async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 6): Promise<T | null> {
   const response = await fetchFn(url);
   if (response.status === 404) return null;
   if (response.status === 429 && retriesLeft > 0) {
-    await sleep(300 * 2 ** (5 - retriesLeft));
+    await sleep(500 * 2 ** (6 - retriesLeft));
     return fetchJson<T>(url, fetchFn, retriesLeft - 1);
   }
   if (!response.ok) throw new ScrapeError(`npm returned ${response.status} for ${url}`);
@@ -117,7 +117,7 @@ async function fetchDownloads(
   }
   // Scoped packages can't be bulk-queried, so fetch them individually with bounded
   // concurrency: fast enough to avoid test/CI timeouts, gentle enough to avoid 429s.
-  const SCOPED_CONCURRENCY = 4;
+  const SCOPED_CONCURRENCY = 3;
   for (let i = 0; i < scoped.length; i += SCOPED_CONCURRENCY) {
     const chunk = scoped.slice(i, i + SCOPED_CONCURRENCY);
     const ranges = await Promise.all(
