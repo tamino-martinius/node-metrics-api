@@ -22,11 +22,13 @@ export function downloadWindow(now: Date, months: number): { start: string; end:
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 4): Promise<T | null> {
+async function fetchJson<T>(url: string, fetchFn: FetchFn, retriesLeft = 5): Promise<T | null> {
   const response = await fetchFn(url);
   if (response.status === 404) return null;
   if (response.status === 429 && retriesLeft > 0) {
-    await sleep(400 * 2 ** (4 - retriesLeft));
+    // api.npmjs.org's downloads endpoint enforces a tight sliding-window limit per IP;
+    // a real cooldown (not a quick doubling backoff) is needed for the window to clear.
+    await sleep(5_000 * 2 ** (5 - retriesLeft));
     return fetchJson<T>(url, fetchFn, retriesLeft - 1);
   }
   if (!response.ok) throw new ScrapeError(`npm returned ${response.status} for ${url}`);
@@ -119,7 +121,7 @@ async function fetchDownloads(
   // concurrency beyond 1 reliably trips api.npmjs.org's per-IP rate limit for a maintainer
   // with 100+ scoped packages, so fetch them strictly one at a time with a small pacing
   // delay between requests; fetchJson's retry/backoff absorbs any remaining transient 429s.
-  const REQUEST_SPACING_MS = 100;
+  const REQUEST_SPACING_MS = 500;
   for (const name of scoped) {
     const url = `https://api.npmjs.org/downloads/range/${window.start}:${window.end}/${name}`;
     result[name] = toMap(await fetchJson<DownloadRange>(url, fetchFn));
