@@ -10,7 +10,13 @@ function routingFetch() {
     if (u.includes('/users?username=')) {
       return new Response(
         JSON.stringify([
-          { id: 64248, name: 'Stan Hu', username: 'stanhu', avatar_url: 'https://a/x', web_url: 'https://gitlab.com/stanhu' },
+          {
+            id: 64248,
+            name: 'Stan Hu',
+            username: 'stanhu',
+            avatar_url: 'https://a/x',
+            web_url: 'https://gitlab.com/stanhu',
+          },
         ]),
         { status: 200 },
       );

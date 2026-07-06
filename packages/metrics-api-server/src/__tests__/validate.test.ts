@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidGithubUsername, isValidNpmUsername, isValidGitlabUsername } from '../validate.js';
+import { isValidGithubUsername, isValidGitlabUsername, isValidNpmUsername } from '../validate.js';
 
 describe('isValidGithubUsername', () => {
   it('accepts normal usernames', () => {

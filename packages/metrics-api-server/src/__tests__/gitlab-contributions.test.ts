@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { bucketLevel, fetchGitlabContributions } from '../gitlab/contributions.js';
 
-const cal = (body: unknown) => (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
+const cal = (body: unknown) =>
+  (async () => new Response(JSON.stringify(body), { status: 200 })) as unknown as typeof fetch;
 
 describe('bucketLevel', () => {
   it('buckets counts into levels 0..4', () => {

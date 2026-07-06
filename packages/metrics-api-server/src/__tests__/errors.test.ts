@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { GithubRateLimitError, GithubTokenError, GitlabApiError, GitlabRateLimitError, GitlabTokenError } from '../errors.js';
+import {
+  GithubRateLimitError,
+  GithubTokenError,
+  GitlabApiError,
+  GitlabRateLimitError,
+  GitlabTokenError,
+} from '../errors.js';
 
 describe('github graphql errors', () => {
   it('GithubTokenError has name and default message', () => {
