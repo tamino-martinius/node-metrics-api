@@ -3,8 +3,11 @@ import { fetchAvailableYears, scrapeGithubContributions } from '../../github/con
 import { scrapeGithubProfile } from '../../github/profile.js';
 import { scrapeGithubRepos } from '../../github/repos.js';
 import { fetchNpmStats } from '../../npm/stats.js';
+import { getTwitterUser } from '../../twitter/user.js';
 
 const USER = process.env.SMOKE_USER ?? 'tamino-martinius';
+// Twitter handles differ from the github/npm username, so it has its own override.
+const TWITTER_USER = process.env.SMOKE_TWITTER_USER ?? 'TaminoMartinius';
 
 describe(`live scraping for ${USER}`, () => {
   it('contributions: rolling year has >= 365 valid days with a positive total', async () => {
@@ -35,6 +38,14 @@ describe(`live scraping for ${USER}`, () => {
     expect(repos.length).toBeGreaterThanOrEqual(1);
     for (const repo of repos) expect(Number.isInteger(repo.stargazerCount)).toBe(true);
     expect(repos.some((repo) => repo.language !== null)).toBe(true);
+  });
+
+  it('twitter: guest-token flow returns a profile with counts (guards query-id/schema drift)', async () => {
+    const { profile } = await getTwitterUser(TWITTER_USER);
+    expect(profile.username.toLowerCase()).toBe(TWITTER_USER.toLowerCase());
+    expect(profile.name.length).toBeGreaterThan(0);
+    expect(profile.followerCount).toBeGreaterThan(0);
+    expect(profile.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
   it('npm: packages exist with publish history and windowed downloads', async () => {

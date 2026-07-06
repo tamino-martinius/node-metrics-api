@@ -89,6 +89,37 @@ export interface GithubUser {
   warnings?: string[];
 }
 
+export interface TwitterProfile {
+  /** Stable numeric account id (rest_id) — survives handle changes. */
+  id: string;
+  name: string;
+  /** Handle without the leading "@". */
+  username: string;
+  bio: string;
+  avatarUrl: string;
+  bannerUrl: string | null;
+  /** Canonical profile URL. */
+  url: string;
+  /** The user's linked website (expanded from the t.co wrapper), or null. */
+  website: string | null;
+  location: string;
+  /** ISO 8601 account creation timestamp. */
+  createdAt: string;
+  followerCount: number;
+  followingCount: number;
+  tweetCount: number;
+  likeCount: number;
+  mediaCount: number;
+  listedCount: number;
+  /** X "blue" verification (the meaningful current signal). */
+  verified: boolean;
+}
+
+export interface TwitterUser {
+  profile: TwitterProfile;
+  warnings?: string[];
+}
+
 export interface GithubGraphqlData {
   accountCreatedAt: string;
   location: string | null;

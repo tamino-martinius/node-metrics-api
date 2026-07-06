@@ -8,5 +8,8 @@ export * from './github/user.js';
 export * from './handler.js';
 export * from './html.js';
 export * from './npm/stats.js';
+export * from './twitter/fetch.js';
+export * from './twitter/profile.js';
+export * from './twitter/user.js';
 export * from './types.js';
 export * from './validate.js';

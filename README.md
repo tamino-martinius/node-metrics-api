@@ -1,8 +1,9 @@
 # node-metrics-api
 
-Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON — no token or
-auth required for the base data. Optional GitHub GraphQL enrichment can layer in extra fields (see
-below). Deployed as Vercel functions at https://metrics-api.tamino.dev.
+Scrapes public GitHub profile pages, pulls public X (Twitter) profiles via X's own guest-token
+flow, and aggregates npm registry APIs into clean JSON — no token or auth required for the base
+data. Optional GitHub GraphQL enrichment can layer in extra fields (see below). Deployed as Vercel
+functions at https://metrics-api.tamino.dev.
 
 Two packages:
 
@@ -16,6 +17,7 @@ Two packages:
 | Endpoint | Returns |
 | --- | --- |
 | `GET /github/:user?y=all\|last\|2024,2025` | `{ profile, repos, contributions, warnings? }` in one response |
+| `GET /twitter/:user` | `{ profile }` — X profile with follower/following/tweet counts and account age |
 | `GET /npm/:user?months=12` | packages with publish history + windowed daily downloads |
 
 Notes on the data:
@@ -39,6 +41,7 @@ Example:
 
 ```bash
 curl https://metrics-api.tamino.dev/github/tamino-martinius
+curl https://metrics-api.tamino.dev/twitter/TaminoMartinius
 curl https://metrics-api.tamino.dev/npm/tamino-martinius?months=6
 ```
 
@@ -72,6 +75,28 @@ Every response — enriched or not — carries `access-control-allow-origin: *` 
 `vary: Authorization`, and `OPTIONS` preflight requests are answered with
 `access-control-allow-headers: authorization` so browsers can send the `Authorization` header
 cross-origin.
+
+### X (Twitter)
+
+`GET /twitter/:user` returns `{ profile }` for a public X profile: `id` (stable numeric id),
+`name`, `username`, `bio`, `avatarUrl`, `bannerUrl`, `url`, `website` (the linked site, expanded
+from the `t.co` wrapper), `location`, `createdAt` (ISO), `followerCount`, `followingCount`,
+`tweetCount`, `likeCount`, `mediaCount`, `listedCount`, and `verified` (X "blue" verification).
+
+There is no official-API key or login involved. Like x.com's own logged-out web client, the server
+activates a short-lived **guest token** (`POST /1.1/guest/activate.json`) and then calls the public
+`UserByScreenName` GraphQL endpoint with that token plus X's public web bearer token. Both are
+values x.com ships to every anonymous visitor — no secret is stored, so responses stay publicly
+cacheable just like the GitHub/npm ones.
+
+Because this rides X's private web endpoints, it has two moving parts that X can change without
+notice: the `UserByScreenName` **query id** (rotated on web-app redeploys) and its required
+**feature flags**. Both live as constants in `packages/metrics-api-server/src/twitter/fetch.ts`;
+when X changes them the request starts failing and the **nightly smoke test** (`pnpm test:live`)
+flags it so the constants can be refreshed. X may also rate-limit or block requests coming from
+datacenter IP ranges (e.g. some serverless/CI hosts); if that shows up in production, route the
+outbound `fetch` through a proxy — the `fetchFn` is injectable, so it drops in without touching the
+parsing logic.
 
 ## Caching
 
@@ -109,6 +134,7 @@ scrapers directly instead of calling over HTTP.
 ```
 api/                         Vercel functions (thin wrappers around metrics-api-server)
   github/user.ts
+  twitter/user.ts
   npm/stats.ts
 packages/
   metrics-api-server/        scrapers, npm aggregator, handler factory
