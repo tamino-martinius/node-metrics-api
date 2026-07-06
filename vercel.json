@@ -4,9 +4,7 @@
   "installCommand": "pnpm install",
   "buildCommand": "pnpm --filter metrics-api-server build",
   "rewrites": [
-    { "source": "/github/:user/contributions", "destination": "/api/github/contributions?user=:user" },
-    { "source": "/github/:user/profile", "destination": "/api/github/profile?user=:user" },
-    { "source": "/github/:user/repos", "destination": "/api/github/repos?user=:user" },
+    { "source": "/github/:user", "destination": "/api/github/user?user=:user" },
     { "source": "/npm/:user", "destination": "/api/npm/stats?user=:user" }
   ]
 }
