@@ -57,15 +57,23 @@ export async function fetchGitlabProjects(
 
   await Promise.all(
     projects.slice(0, TOP_N).map(async (project) => {
-      const [langs, detail] = await Promise.all([
-        gitlabApiFetch<Record<string, number>>(`/projects/${project.id}/languages`, { token, fetchFn }),
-        gitlabApiFetch<{ statistics?: { commit_count?: number } }>(`/projects/${project.id}?statistics=true`, {
-          token,
-          fetchFn,
-        }),
-      ]);
-      project.language = primaryLanguage(langs);
-      project.defaultBranchCommits = detail.statistics?.commit_count ?? null;
+      try {
+        const [langs, detail] = await Promise.all([
+          gitlabApiFetch<Record<string, number>>(`/projects/${project.id}/languages`, { token, fetchFn }),
+          gitlabApiFetch<{ statistics?: { commit_count?: number } }>(`/projects/${project.id}?statistics=true`, {
+            token,
+            fetchFn,
+          }),
+        ]);
+        project.language = primaryLanguage(langs);
+        project.defaultBranchCommits = detail.statistics?.commit_count ?? null;
+      } catch {
+        // A single project's enrichment (languages/statistics) failing (403/404/etc. for a
+        // private/deleted project surfaced in a token-scoped list) must not take down the
+        // whole list. Leave this project's language/defaultBranchCommits at their defaults.
+        project.language = null;
+        project.defaultBranchCommits = null;
+      }
     }),
   );
   return projects.map(({ id: _id, ...rest }) => rest);

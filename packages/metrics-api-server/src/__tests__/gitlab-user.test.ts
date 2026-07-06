@@ -3,7 +3,7 @@ import { GitlabTokenError } from '../errors.js';
 import { getGitlabUser } from '../gitlab/user.js';
 
 // Routes every GitLab endpoint used by the orchestrator. `opts` toggles failures.
-function routingFetch(opts: { projectsStatus?: number; eventsStatus?: number } = {}) {
+function routingFetch(opts: { projectsStatus?: number; eventsStatus?: number; detailStatus?: number } = {}) {
   return (async (url: string) => {
     const u = String(url);
     if (u.includes('/users?username=ghost')) return new Response('[]', { status: 200 });
@@ -30,6 +30,7 @@ function routingFetch(opts: { projectsStatus?: number; eventsStatus?: number } =
       );
     }
     if (/\/users\/1(\?|$)/.test(u)) {
+      if (opts.detailStatus) return new Response('{}', { status: opts.detailStatus });
       return new Response(JSON.stringify({ bio: 'b', location: 'L', created_at: 'c' }), { status: 200 });
     }
     if (/\/projects\/5\/languages/.test(u)) return new Response(JSON.stringify({ TS: 100 }), { status: 200 });
@@ -71,5 +72,19 @@ describe('getGitlabUser', () => {
     const out = await getGitlabUser('u', { serverToken: 'srv', fetchFn: routingFetch({ projectsStatus: 401 }) });
     expect(out.projects).toEqual([]);
     expect(out.warnings).toContain('projects: unavailable');
+  });
+
+  it('server token: profile enrichment rejection falls back to base profile with a warning', async () => {
+    const out = await getGitlabUser('u', { serverToken: 'srv', fetchFn: routingFetch({ detailStatus: 401 }) });
+    expect(out.profile.username).toBe('u');
+    expect(out.profile.accountCreatedAt).toBeUndefined();
+    expect(out.profile.followerCount).toBe(0);
+    expect(out.warnings).toContain('profile enrichment: unavailable');
+  });
+
+  it('rethrows GitlabTokenError when a caller token is rejected on events (byType)', async () => {
+    await expect(
+      getGitlabUser('u', { callerToken: 'bad', fetchFn: routingFetch({ eventsStatus: 401 }) }),
+    ).rejects.toBeInstanceOf(GitlabTokenError);
   });
 });
