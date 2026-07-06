@@ -1,6 +1,6 @@
-import type { GithubContributions, GithubProfile, GithubRepo, NpmStats } from 'metrics-api-server';
+import type { GithubUser, NpmStats } from 'metrics-api-server';
 
-export type { GithubContributions, GithubProfile, GithubRepo, NpmStats };
+export type { GithubUser, NpmStats };
 
 export const DEFAULT_BASE_URL = 'https://metrics-api.tamino.dev';
 
@@ -32,12 +32,13 @@ export class MetricsApiClient {
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
-  async #get<T>(path: string, params: Record<string, string> = {}): Promise<T> {
+  async #get<T>(path: string, params: Record<string, string> = {}, token?: string): Promise<T> {
     const query = new URLSearchParams(params).toString();
     const url = `${this.#baseUrl}${path}${query ? `?${query}` : ''}`;
+    const init = token ? { headers: { authorization: `Bearer ${token}` } } : undefined;
     let response: Response;
     try {
-      response = await this.#fetch(url);
+      response = await this.#fetch(url, init);
     } catch (error) {
       throw new MetricsApiError('network', 0, `request failed: ${String(error)}`);
     }
@@ -50,20 +51,16 @@ export class MetricsApiClient {
     return response.json() as Promise<T>;
   }
 
-  githubContributions(user: string, options: { years?: 'all' | 'last' | number[] } = {}): Promise<GithubContributions> {
+  github(
+    user: string,
+    options: { years?: 'all' | 'last' | number[]; token?: string; lifetime?: boolean } = {},
+  ): Promise<GithubUser> {
     const params: Record<string, string> = {};
     if (options.years && options.years !== 'all') {
       params.y = Array.isArray(options.years) ? options.years.join(',') : options.years;
     }
-    return this.#get(`/github/${encodeURIComponent(user)}/contributions`, params);
-  }
-
-  githubProfile(user: string): Promise<GithubProfile> {
-    return this.#get(`/github/${encodeURIComponent(user)}/profile`);
-  }
-
-  githubRepos(user: string): Promise<GithubRepo[]> {
-    return this.#get(`/github/${encodeURIComponent(user)}/repos`);
+    if (options.lifetime) params.lifetime = '1';
+    return this.#get(`/github/${encodeURIComponent(user)}`, params, options.token);
   }
 
   npmStats(user: string, options: { months?: number } = {}): Promise<NpmStats> {
