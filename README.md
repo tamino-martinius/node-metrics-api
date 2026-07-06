@@ -18,7 +18,7 @@ Two packages:
 | --- | --- |
 | `GET /github/:user?y=all\|last\|2024,2025` | `{ profile, repos, contributions, warnings? }` in one response |
 | `GET /twitter/:user` | `{ profile }` — X profile with follower/following/tweet counts and account age |
-| `GET /linkedin/:user` | `{ profile }` — LinkedIn profile with headline, location, followers, languages, employer, education |
+| `GET /linkedin/:user` | `{ profile }` — LinkedIn profile: headline, location, followers, languages, employer, education, plus recent posts/projects/articles |
 | `GET /npm/:user?months=12` | packages with publish history + windowed daily downloads |
 
 Notes on the data:
@@ -107,6 +107,15 @@ public LinkedIn profile: `username`, `name`, `headline`, `avatarUrl`, `url`, `lo
 year). Same mechanism as the X endpoint — LinkedIn server-renders the profile as a schema.org
 JSON-LD `@graph` whose `Person` node the scraper parses from a plain browser `GET` of
 `https://www.linkedin.com/in/<user>`.
+
+The same `@graph` also carries the profile's public activity, returned as three arrays (each empty
+when the profile has none):
+
+- `posts` — recent shares: `text`, `url`, `publishedAt` (ISO), `likeCount`.
+- `projects` — publications/projects: `name`, `description`, and `url` (unwrapped from LinkedIn's
+  redirect to the real destination, e.g. a linked GitHub repo).
+- `articles` — long-form LinkedIn (Pulse) articles: `headline`, `url`, `publishedAt`, `likeCount`,
+  `imageUrl`.
 
 Two LinkedIn-specific caveats:
 

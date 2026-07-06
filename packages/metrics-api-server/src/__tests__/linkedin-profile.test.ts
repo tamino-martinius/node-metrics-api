@@ -25,6 +25,9 @@ describe('parseLinkedinProfile', () => {
       languages: ['German', 'English', 'French'],
       companies: ['ServiceNow'], // masked past employers dropped
       education: [{ name: 'Philipps-Universität Marburg', startYear: 2004, endYear: 2015 }],
+      posts: [],
+      projects: [],
+      articles: [],
     });
   });
 
@@ -44,7 +47,42 @@ describe('parseLinkedinProfile', () => {
       languages: [],
       companies: [],
       education: [],
+      posts: [],
+      projects: [],
+      articles: [],
     });
+  });
+
+  it('extracts posts, projects and articles from the other @graph nodes', () => {
+    const html = `<html><head>
+<script type="application/ld+json">{"@graph":[
+{"@type":"Person","name":"Tamino Martinius"},
+{"@type":"DiscussionForumPosting","text":"Hello world post","url":"https://www.linkedin.com/posts/tamino_x-activity-123","datePublished":"2026-06-18T15:20:37.570Z","interactionStatistic":{"@type":"InteractionCounter","interactionType":"http://schema.org/LikeAction","userInteractionCount":21}},
+{"@type":"PublicationIssue","name":"UI Snippet","description":"Menu animations","url":"https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Fgithub%2Ecom%2Ftamino%2Fui&urlhash=zzz"},
+{"@type":"Article","headline":"Golden age","url":"https://www.linkedin.com/pulse/golden-age","datePublished":"2026-06-07T21:12:07.000+00:00","interactionStatistic":{"interactionType":"http://schema.org/LikeAction","userInteractionCount":7623},"image":{"@type":"ImageObject","contentUrl":"https://media.licdn.com/img.jpg"}}
+]}</script>
+</head></html>`;
+    const profile = parseLinkedinProfile(html, 'tamino-martinius');
+    expect(profile.posts).toEqual([
+      {
+        text: 'Hello world post',
+        url: 'https://www.linkedin.com/posts/tamino_x-activity-123',
+        publishedAt: '2026-06-18T15:20:37.570Z',
+        likeCount: 21,
+      },
+    ]);
+    expect(profile.projects).toEqual([
+      { name: 'UI Snippet', url: 'https://github.com/tamino/ui', description: 'Menu animations' },
+    ]);
+    expect(profile.articles).toEqual([
+      {
+        headline: 'Golden age',
+        url: 'https://www.linkedin.com/pulse/golden-age',
+        publishedAt: '2026-06-07T21:12:07.000+00:00',
+        likeCount: 7623,
+        imageUrl: 'https://media.licdn.com/img.jpg',
+      },
+    ]);
   });
 
   it('throws UserNotFoundError when there is no Person node', () => {
