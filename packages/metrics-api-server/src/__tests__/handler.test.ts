@@ -173,12 +173,14 @@ describe('githubUserResponse', () => {
     expect(res.status).toBe(204);
     expect(res.headers.get('access-control-allow-methods')).toContain('GET');
     expect(res.headers.get('access-control-allow-headers')?.toLowerCase()).toContain('authorization');
+    expect(res.headers.get('vary')).toBe('Authorization');
   });
 
   it('invalid username -> 400 no-store', async () => {
     const res = await githubUserResponse(req('user=bad//name'), { fetchFn: routingFetch() });
     expect(res.status).toBe(400);
     expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(res.headers.get('vary')).toBe('Authorization');
   });
 
   it('bad caller token -> 401, and the token never appears in logs', async () => {

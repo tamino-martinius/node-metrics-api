@@ -59,6 +59,7 @@ const CORS = {
   'access-control-allow-methods': 'GET, OPTIONS',
   'access-control-allow-headers': 'authorization',
   'access-control-max-age': '86400',
+  vary: 'Authorization',
 };
 
 export function parseBearer(header: string | null): string | undefined {
@@ -89,10 +90,10 @@ export async function githubUserResponse(
 
   const url = new URL(request.url);
   const user = url.searchParams.get('user') ?? '';
-  if (!isValidGithubUsername(user)) return respond({ error: 'invalid username' }, 400, 'no-store');
+  const vary = { vary: 'Authorization' };
+  if (!isValidGithubUsername(user)) return respond({ error: 'invalid username' }, 400, 'no-store', vary);
 
   const callerToken = parseBearer(request.headers.get('authorization'));
-  const vary = { vary: 'Authorization' };
   try {
     const result = await getGithubUser(user, {
       years: parseYears(url),
