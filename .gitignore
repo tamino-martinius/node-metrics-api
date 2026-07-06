@@ -2,3 +2,6 @@ node_modules/
 dist/
 .vercel/
 coverage/
+
+# design/plan docs — kept local, not committed to origin
+docs/

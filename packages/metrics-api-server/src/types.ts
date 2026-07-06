@@ -12,6 +12,9 @@ export interface GithubContributions {
   /** Keyed by year ("2024") or "lastYear" for the rolling last-year view. */
   total: Record<string, number>;
   contributions: ContributionDay[];
+  byType?: GithubByType;
+  privateLastYear?: number;
+  lifetimeTotal?: number;
 }
 
 export interface GithubOrganization {
@@ -30,6 +33,8 @@ export interface GithubProfile {
   followerCount: number;
   followingCount: number;
   organizations: GithubOrganization[];
+  accountCreatedAt?: string;
+  location?: string | null;
 }
 
 export interface GithubRepo {
@@ -40,6 +45,9 @@ export interface GithubRepo {
   stargazerCount: number;
   forkCount: number;
   isFork: boolean;
+  defaultBranchCommits?: number | null;
+  createdAt?: string;
+  pushedAt?: string;
 }
 
 export interface NpmPackageDetails {
@@ -65,4 +73,28 @@ export interface NpmStats {
     versionsPerHour: Record<string, number>;
   };
   packages: NpmPackageStats[];
+}
+
+export interface GithubByType {
+  commits: number;
+  pullRequests: number;
+  reviews: number;
+  issues: number;
+}
+
+export interface GithubUser {
+  profile: GithubProfile;
+  repos: GithubRepo[];
+  contributions: GithubContributions;
+  warnings?: string[];
+}
+
+export interface GithubGraphqlData {
+  accountCreatedAt: string;
+  location: string | null;
+  repos: Array<{ name: string; defaultBranchCommits: number | null; createdAt: string; pushedAt: string }>;
+  byType?: GithubByType;
+  privateLastYear?: number;
+  lifetimeTotal?: number;
+  rateLimit: { cost: number; remaining: number };
 }

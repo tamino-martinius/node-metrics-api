@@ -1,15 +1,13 @@
 // Local dev server mirroring vercel.json's rewrites. Usage: npx tsx scripts/dev-server.mjs [port]
 import { createServer } from 'node:http';
-import { GET as contributions } from '../api/github/contributions.ts';
-import { GET as profile } from '../api/github/profile.ts';
-import { GET as repos } from '../api/github/repos.ts';
+import { GET as githubUser } from '../api/github/user.ts';
 import { GET as npmStats } from '../api/npm/stats.ts';
 
 const PORT = Number(process.argv[2] ?? 8787);
 
 const route = (pathname) => {
-  let match = pathname.match(/^\/github\/([^/]+)\/(contributions|profile|repos)$/);
-  if (match) return { handler: { contributions, profile, repos }[match[2]], user: match[1] };
+  let match = pathname.match(/^\/github\/([^/]+)$/);
+  if (match) return { handler: githubUser, user: match[1] };
   match = pathname.match(/^\/npm\/([^/]+)$/);
   if (match) return { handler: npmStats, user: match[1] };
   return null;

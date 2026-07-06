@@ -11,3 +11,17 @@ export class UserNotFoundError extends Error {
     this.name = 'UserNotFoundError';
   }
 }
+
+export class GithubTokenError extends Error {
+  constructor(message = 'github token was rejected') {
+    super(message);
+    this.name = 'GithubTokenError';
+  }
+}
+
+export class GithubRateLimitError extends Error {
+  constructor(message = 'github graphql rate limit exceeded') {
+    super(message);
+    this.name = 'GithubRateLimitError';
+  }
+}

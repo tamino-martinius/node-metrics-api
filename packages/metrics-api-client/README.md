@@ -16,19 +16,40 @@ import { MetricsApiClient } from 'metrics-api-client';
 const api = new MetricsApiClient(); // default: https://metrics-api.tamino.dev
 // const api = new MetricsApiClient({ baseUrl: 'https://your-fork.vercel.app' });
 
-const profile = await api.githubProfile('octocat');
-const contributions = await api.githubContributions('octocat', { years: 'all' });
+const user = await api.github('octocat');
+// { profile, repos, contributions, warnings? }
 ```
 
 Other methods:
 
 ```ts
-const repos = await api.githubRepos('octocat');
 const npmStats = await api.npmStats('octocat', { months: 6 }); // 1–17, default 12
 ```
 
-`githubContributions`'s `years` option accepts `'all'` (default), `'last'` (rolling last 12
-months), or a `number[]` of calendar years — mirroring the server's `y` query param.
+### `github(user, options?)`
+
+Returns a `GithubUser`: `{ profile, repos, contributions, warnings? }`. `options`:
+
+```ts
+{
+  years?: 'all' | 'last' | number[]; // default 'all' — mirrors the server's `y` query param
+  token?: string;                    // your own GitHub PAT — sent as `Authorization: Bearer`
+  lifetime?: boolean;                // with `token`, also request contributions.lifetimeTotal
+}
+```
+
+- Without `token`, you get the base scraped profile/repos/contributions, plus any public GraphQL
+  enrichment the server adds via its own `GITHUB_TOKEN` (`profile.accountCreatedAt`,
+  `profile.location`, per-repo `defaultBranchCommits`/`createdAt`/`pushedAt`) — best-effort, may be
+  absent if the server has no token or is rate-limited (see `warnings`).
+- With `token`, your PAT is sent as `Authorization: Bearer <token>` and the response additionally
+  includes `contributions.byType` (`commits`, `pullRequests`, `reviews`, `issues`) and
+  `contributions.privateLastYear`, computed from *your* token's access — the request is never
+  cached server-side. Add `lifetime: true` to also get `contributions.lifetimeTotal`.
+
+```ts
+const enriched = await api.github('octocat', { years: [2024, 2025], token: myPat, lifetime: true });
+```
 
 ## Options
 
@@ -49,7 +70,7 @@ import { MetricsApiClient, MetricsApiError } from 'metrics-api-client';
 
 const api = new MetricsApiClient();
 try {
-  await api.githubProfile('this-user-does-not-exist-hopefully');
+  await api.github('this-user-does-not-exist-hopefully');
 } catch (error) {
   if (error instanceof MetricsApiError) {
     console.log(error.kind, error.status, error.message);
@@ -64,10 +85,11 @@ try {
 | --- | --- | --- |
 | `bad-request` | 400 | invalid username |
 | `not-found` | 404 | GitHub/npm has no such user |
-| `upstream` | other non-2xx | server-side scrape/aggregation failure |
+| `upstream` | other non-2xx (incl. 401 for a rejected `token`) | server-side scrape/aggregation failure, or GitHub rejected the caller's token |
 | `network` | — (status `0`) | the request itself failed (offline, DNS, CORS, etc.) |
 
 ## Types
 
-`GithubContributions`, `GithubProfile`, `GithubRepo`, and `NpmStats` are re-exported from
-`metrics-api-server` so consumers don't need a direct dependency on that package just for types.
+`GithubUser` and `NpmStats` are re-exported from `metrics-api-server` so consumers don't need a
+direct dependency on that package just for types. `GithubUser` includes the nested `profile`,
+`repos[]`, and `contributions` (with optional `byType`) shapes described above.
