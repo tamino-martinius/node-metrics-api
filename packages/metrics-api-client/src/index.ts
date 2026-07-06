@@ -1,6 +1,6 @@
-import type { GithubUser, NpmStats } from 'metrics-api-server';
+import type { GithubUser, GitlabUser, NpmStats } from 'metrics-api-server';
 
-export type { GithubUser, NpmStats };
+export type { GithubUser, GitlabUser, NpmStats };
 
 export const DEFAULT_BASE_URL = 'https://metrics-api.tamino.dev';
 
@@ -61,6 +61,10 @@ export class MetricsApiClient {
     }
     if (options.lifetime) params.lifetime = '1';
     return this.#get(`/github/${encodeURIComponent(user)}`, params, options.token);
+  }
+
+  gitlab(user: string, options: { token?: string } = {}): Promise<GitlabUser> {
+    return this.#get(`/gitlab/${encodeURIComponent(user)}`, {}, options.token);
   }
 
   npmStats(user: string, options: { months?: number } = {}): Promise<NpmStats> {
