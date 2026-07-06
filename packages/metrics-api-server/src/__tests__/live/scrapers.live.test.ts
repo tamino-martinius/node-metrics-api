@@ -40,7 +40,7 @@ describe(`live scraping for ${USER}`, () => {
     expect(repos.some((repo) => repo.language !== null)).toBe(true);
   });
 
-  it('twitter: guest-token flow returns a profile with counts (guards query-id/schema drift)', async () => {
+  it('twitter: JSON-LD scrape returns a profile with counts (guards x.com HTML/JSON-LD drift)', async () => {
     const { profile } = await getTwitterUser(TWITTER_USER);
     expect(profile.username.toLowerCase()).toBe(TWITTER_USER.toLowerCase());
     expect(profile.name.length).toBeGreaterThan(0);
