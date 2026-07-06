@@ -1,7 +1,16 @@
-import { ScrapeError } from '../errors.js';
-import type { GithubByType, GithubGraphqlData } from '../types.js';
+import { GithubRateLimitError, GithubTokenError, ScrapeError } from '../errors.js';
+import type { FetchFn, GithubByType, GithubGraphqlData } from '../types.js';
 
+const GITHUB_GRAPHQL = 'https://api.github.com/graphql';
 const RATE_LIMIT = 'rateLimit { cost remaining }';
+
+export interface GithubGraphqlOptions {
+  token: string;
+  includeContributions?: boolean;
+  includeLifetime?: boolean;
+  fetchFn?: FetchFn;
+  now?: Date;
+}
 
 export function buildMainQuery(includeContributions: boolean): string {
   const contributions = includeContributions
@@ -90,4 +99,42 @@ export function sumLifetime(data: Json, startYear: number, endYear: number): num
       (c.restrictedContributionsCount ?? 0);
   }
   return total;
+}
+
+async function postGraphql(query: string, login: string, token: string, fetchFn: FetchFn): Promise<Json> {
+  const response = await fetchFn(GITHUB_GRAPHQL, {
+    method: 'POST',
+    headers: {
+      authorization: `bearer ${token}`,
+      'content-type': 'application/json',
+      'user-agent': 'metrics-api (+https://github.com/tamino-martinius/node-metrics-api)',
+    },
+    body: JSON.stringify({ query, variables: { login } }),
+  });
+  if (response.status === 401 || response.status === 403) {
+    // 401 bad creds; 403 is used by GitHub for secondary rate limits.
+    if (response.status === 401) throw new GithubTokenError();
+    throw new GithubRateLimitError();
+  }
+  const body = (await response.json()) as Json;
+  if (Array.isArray(body.errors) && body.errors.length > 0) {
+    const types = body.errors.map((e: Json) => e.type);
+    if (types.includes('RATE_LIMITED')) throw new GithubRateLimitError();
+    throw new ScrapeError(`github graphql error: ${body.errors[0]?.message ?? 'unknown'}`);
+  }
+  return body.data;
+}
+
+export async function fetchGithubGraphql(user: string, opts: GithubGraphqlOptions): Promise<GithubGraphqlData | null> {
+  const { token, includeContributions = false, includeLifetime = false, fetchFn = fetch, now = new Date() } = opts;
+  const mainData = await postGraphql(buildMainQuery(includeContributions), user, token, fetchFn);
+  if (!mainData?.user) return null;
+  const result: GithubGraphqlData = normalizeMain(mainData);
+  if (includeLifetime) {
+    const startYear = new Date(result.accountCreatedAt).getUTCFullYear();
+    const endYear = now.getUTCFullYear();
+    const lifeData = await postGraphql(buildLifetimeQuery(startYear, endYear), user, token, fetchFn);
+    result.lifetimeTotal = sumLifetime(lifeData, startYear, endYear);
+  }
+  return result;
 }
