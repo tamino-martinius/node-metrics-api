@@ -43,7 +43,12 @@ export async function activateGuestToken(fetchFn: FetchFn): Promise<string> {
     method: 'POST',
     headers: { authorization: `Bearer ${BEARER}`, 'user-agent': BROWSER_UA },
   });
-  if (!response.ok) throw new ScrapeError(`twitter guest activation failed: ${response.status}`);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new ScrapeError(
+      `twitter guest activation failed: ${response.status}${detail ? `: ${detail.slice(0, 200)}` : ''}`,
+    );
+  }
   const body = (await response.json()) as { guest_token?: string };
   if (!body.guest_token) throw new ScrapeError('twitter guest activation returned no token');
   return body.guest_token;
@@ -69,7 +74,12 @@ export async function fetchTwitterUserRaw(user: string, opts: FetchTwitterUserOp
   const response = await fetchFn(url, {
     headers: { authorization: `Bearer ${BEARER}`, 'x-guest-token': guestToken, 'user-agent': BROWSER_UA },
   });
-  if (!response.ok) throw new ScrapeError(`twitter returned ${response.status} for UserByScreenName`);
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new ScrapeError(
+      `twitter returned ${response.status} for UserByScreenName${detail ? `: ${detail.slice(0, 300)}` : ''}`,
+    );
+  }
 
   const body = (await response.json()) as Json;
   const result = body?.data?.user?.result;
