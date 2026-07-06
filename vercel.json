@@ -6,6 +6,7 @@
   "rewrites": [
     { "source": "/github/:user", "destination": "/api/github/user?user=:user" },
     { "source": "/npm/:user", "destination": "/api/npm/stats?user=:user" },
-    { "source": "/twitter/:user", "destination": "/api/twitter/user?user=:user" }
+    { "source": "/twitter/:user", "destination": "/api/twitter/user?user=:user" },
+    { "source": "/linkedin/:user", "destination": "/api/linkedin/user?user=:user" }
   ]
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { isValidGithubUsername, isValidNpmUsername, isValidTwitterUsername } from '../validate.js';
+import {
+  isValidGithubUsername,
+  isValidLinkedinUsername,
+  isValidNpmUsername,
+  isValidTwitterUsername,
+} from '../validate.js';
 
 describe('isValidGithubUsername', () => {
   it('accepts normal usernames', () => {
@@ -33,6 +38,24 @@ describe('isValidTwitterUsername', () => {
     expect(isValidTwitterUsername('has.dot')).toBe(false);
     expect(isValidTwitterUsername('has space')).toBe(false);
     expect(isValidTwitterUsername('@handle')).toBe(false);
+  });
+});
+
+describe('isValidLinkedinUsername', () => {
+  it('accepts LinkedIn vanity slugs', () => {
+    expect(isValidLinkedinUsername('tamino-martinius')).toBe(true);
+    expect(isValidLinkedinUsername('williamhgates')).toBe(true);
+    expect(isValidLinkedinUsername('tamino-martinius-0a1b2c3d')).toBe(true);
+    expect(isValidLinkedinUsername('abc')).toBe(true); // 3-char minimum
+  });
+  it('rejects invalid LinkedIn slugs', () => {
+    expect(isValidLinkedinUsername('')).toBe(false);
+    expect(isValidLinkedinUsername('ab')).toBe(false); // too short
+    expect(isValidLinkedinUsername('a'.repeat(101))).toBe(false); // too long
+    expect(isValidLinkedinUsername('has space')).toBe(false);
+    expect(isValidLinkedinUsername('has/slash')).toBe(false);
+    expect(isValidLinkedinUsername('has.dot')).toBe(false);
+    expect(isValidLinkedinUsername('in/tamino')).toBe(false);
   });
 });
 

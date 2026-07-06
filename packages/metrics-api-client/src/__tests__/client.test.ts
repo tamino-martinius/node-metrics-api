@@ -37,6 +37,13 @@ describe('MetricsApiClient', () => {
     expect(calls).toEqual(['https://metrics-api.tamino.dev/twitter/jack']);
   });
 
+  it('builds the linkedin endpoint URL', async () => {
+    const { calls, fetch } = recordingFetch();
+    const client = new MetricsApiClient({ fetch });
+    await client.linkedin('tamino-martinius');
+    expect(calls).toEqual(['https://metrics-api.tamino.dev/linkedin/tamino-martinius']);
+  });
+
   it('sends the caller token as a bearer Authorization header', async () => {
     const seen: Array<string | null> = [];
     const fetchFn = (async (_url: RequestInfo | URL, init?: RequestInit) => {

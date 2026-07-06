@@ -1,9 +1,9 @@
 # node-metrics-api
 
-Scrapes public GitHub profile pages, scrapes public X (Twitter) profiles from their server-rendered
-JSON-LD, and aggregates npm registry APIs into clean JSON — no token or auth required for the base
-data. Optional GitHub GraphQL enrichment can layer in extra fields (see below). Deployed as Vercel
-functions at https://metrics-api.tamino.dev.
+Scrapes public GitHub profile pages, scrapes public X (Twitter) and LinkedIn profiles from their
+server-rendered JSON-LD, and aggregates npm registry APIs into clean JSON — no token or auth
+required for the base data. Optional GitHub GraphQL enrichment can layer in extra fields (see
+below). Deployed as Vercel functions at https://metrics-api.tamino.dev.
 
 Two packages:
 
@@ -18,6 +18,7 @@ Two packages:
 | --- | --- |
 | `GET /github/:user?y=all\|last\|2024,2025` | `{ profile, repos, contributions, warnings? }` in one response |
 | `GET /twitter/:user` | `{ profile }` — X profile with follower/following/tweet counts and account age |
+| `GET /linkedin/:user` | `{ profile }` — LinkedIn profile with headline, location, followers, languages, employer, education |
 | `GET /npm/:user?months=12` | packages with publish history + windowed daily downloads |
 
 Notes on the data:
@@ -42,6 +43,7 @@ Example:
 ```bash
 curl https://metrics-api.tamino.dev/github/tamino-martinius
 curl https://metrics-api.tamino.dev/twitter/TaminoMartinius
+curl https://metrics-api.tamino.dev/linkedin/tamino-martinius
 curl https://metrics-api.tamino.dev/npm/tamino-martinius?months=6
 ```
 
@@ -97,6 +99,28 @@ also rate-limit or block requests from datacenter IP ranges (e.g. some serverles
 that shows up in production, route the outbound `fetch` through a proxy — the `fetchFn` is
 injectable, so it drops in without touching the parsing logic.
 
+### LinkedIn
+
+`GET /linkedin/:user` (where `:user` is the `/in/<slug>` vanity name) returns `{ profile }` for a
+public LinkedIn profile: `username`, `name`, `headline`, `avatarUrl`, `url`, `location`,
+`countryCode`, `followerCount`, `languages`, `companies`, and `education` (school name + start/end
+year). Same mechanism as the X endpoint — LinkedIn server-renders the profile as a schema.org
+JSON-LD `@graph` whose `Person` node the scraper parses from a plain browser `GET` of
+`https://www.linkedin.com/in/<user>`.
+
+Two LinkedIn-specific caveats:
+
+- **Masked fields.** For logged-out viewers LinkedIn masks some values with asterisks (e.g. past
+  employers show as `*******`); only the current employer is shown in the clear. The parser drops
+  masked entries, so `companies` typically contains just the current employer. Fields that never
+  appear in the public JSON-LD (exact connection count, full work history) are omitted.
+- **Datacenter-IP blocking.** LinkedIn is far more aggressive than X here — it returns HTTP `999`
+  (surfaced as a `502`) or an authwall to IP ranges it distrusts. It works from residential IPs; on
+  a serverless/CI host it may be blocked, in which case route the outbound `fetch` through a proxy
+  via the injectable `fetchFn`. Because a block is indistinguishable from a genuine markup change
+  from CI, the nightly smoke test treats an unreachable LinkedIn profile as a **skip**, not a
+  failure — it validates structure only when LinkedIn actually serves the page.
+
 ## Caching
 
 Anonymous requests and requests enriched only via the server's `GITHUB_TOKEN` are edge-cached for
@@ -134,6 +158,7 @@ scrapers directly instead of calling over HTTP.
 api/                         Vercel functions (thin wrappers around metrics-api-server)
   github/user.ts
   twitter/user.ts
+  linkedin/user.ts
   npm/stats.ts
 packages/
   metrics-api-server/        scrapers, npm aggregator, handler factory
