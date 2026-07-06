@@ -1,8 +1,9 @@
 # node-metrics-api
 
-Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON — no token or
-auth required for the base data. Optional GitHub GraphQL enrichment can layer in extra fields (see
-below). Deployed as Vercel functions at https://metrics-api.tamino.dev.
+Scrapes public GitHub profile pages, scrapes public X (Twitter) profiles from their server-rendered
+JSON-LD, and aggregates npm registry APIs into clean JSON — no token or auth required for the base
+data. Optional GitHub GraphQL enrichment can layer in extra fields (see below). Deployed as Vercel
+functions at https://metrics-api.tamino.dev.
 
 Two packages:
 
@@ -16,6 +17,7 @@ Two packages:
 | Endpoint | Returns |
 | --- | --- |
 | `GET /github/:user?y=all\|last\|2024,2025` | `{ profile, repos, contributions, warnings? }` in one response |
+| `GET /twitter/:user` | `{ profile }` — X profile with follower/following/tweet counts and account age |
 | `GET /npm/:user?months=12` | packages with publish history + windowed daily downloads |
 
 Notes on the data:
@@ -39,6 +41,7 @@ Example:
 
 ```bash
 curl https://metrics-api.tamino.dev/github/tamino-martinius
+curl https://metrics-api.tamino.dev/twitter/TaminoMartinius
 curl https://metrics-api.tamino.dev/npm/tamino-martinius?months=6
 ```
 
@@ -72,6 +75,27 @@ Every response — enriched or not — carries `access-control-allow-origin: *` 
 `vary: Authorization`, and `OPTIONS` preflight requests are answered with
 `access-control-allow-headers: authorization` so browsers can send the `Authorization` header
 cross-origin.
+
+### X (Twitter)
+
+`GET /twitter/:user` returns `{ profile }` for a public X profile: `id` (stable numeric id),
+`name`, `username`, `bio`, `avatarUrl`, `bannerUrl`, `url`, `website` (the linked site),
+`location`, `createdAt` (ISO), `followerCount`, `followingCount`, and `tweetCount`.
+
+No official-API key, login, or token is involved. x.com server-renders the profile as
+[schema.org](https://schema.org) **JSON-LD** (a `ProfilePage` whose `mainEntity` is the `Person`)
+into the HTML for a plain browser `GET` of `https://x.com/<user>`, so the scraper just fetches that
+one page and parses the JSON-LD — the same approach as any public-page scrape here, and responses
+stay publicly cacheable like the GitHub/npm ones. A nonexistent handle still returns HTTP 200 but
+omits the `ProfilePage` block, which the parser treats as "not found" (404).
+
+Follower/following/tweet counts come from the JSON-LD's `interactionStatistic`. Fields that only
+exist in X's authenticated API (`likeCount`, `mediaCount`, `listedCount`, verified status) are
+**not** available from the public page and are intentionally omitted. If X changes the JSON-LD
+markup the scrape starts failing and the **nightly smoke test** (`pnpm test:live`) flags it. X may
+also rate-limit or block requests from datacenter IP ranges (e.g. some serverless/CI hosts); if
+that shows up in production, route the outbound `fetch` through a proxy — the `fetchFn` is
+injectable, so it drops in without touching the parsing logic.
 
 ## Caching
 
@@ -109,6 +133,7 @@ scrapers directly instead of calling over HTTP.
 ```
 api/                         Vercel functions (thin wrappers around metrics-api-server)
   github/user.ts
+  twitter/user.ts
   npm/stats.ts
 packages/
   metrics-api-server/        scrapers, npm aggregator, handler factory

@@ -5,6 +5,7 @@
   "buildCommand": "pnpm --filter metrics-api-server build",
   "rewrites": [
     { "source": "/github/:user", "destination": "/api/github/user?user=:user" },
-    { "source": "/npm/:user", "destination": "/api/npm/stats?user=:user" }
+    { "source": "/npm/:user", "destination": "/api/npm/stats?user=:user" },
+    { "source": "/twitter/:user", "destination": "/api/twitter/user?user=:user" }
   ]
 }
