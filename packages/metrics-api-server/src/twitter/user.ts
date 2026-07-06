@@ -1,5 +1,5 @@
 import type { FetchFn, TwitterUser } from '../types.js';
-import { fetchTwitterUserRaw } from './fetch.js';
+import { fetchTwitterHtml } from './fetch.js';
 import { parseTwitterProfile } from './profile.js';
 
 export interface GetTwitterUserOptions {
@@ -8,6 +8,6 @@ export interface GetTwitterUserOptions {
 
 export async function getTwitterUser(user: string, opts: GetTwitterUserOptions = {}): Promise<TwitterUser> {
   const { fetchFn = fetch } = opts;
-  const result = await fetchTwitterUserRaw(user, { fetchFn });
-  return { profile: parseTwitterProfile(result) };
+  const html = await fetchTwitterHtml(user, { fetchFn });
+  return { profile: parseTwitterProfile(html, user) };
 }

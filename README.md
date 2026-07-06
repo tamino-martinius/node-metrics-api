@@ -1,7 +1,7 @@
 # node-metrics-api
 
-Scrapes public GitHub profile pages, pulls public X (Twitter) profiles via X's own guest-token
-flow, and aggregates npm registry APIs into clean JSON — no token or auth required for the base
+Scrapes public GitHub profile pages, scrapes public X (Twitter) profiles from their server-rendered
+JSON-LD, and aggregates npm registry APIs into clean JSON — no token or auth required for the base
 data. Optional GitHub GraphQL enrichment can layer in extra fields (see below). Deployed as Vercel
 functions at https://metrics-api.tamino.dev.
 
@@ -79,24 +79,23 @@ cross-origin.
 ### X (Twitter)
 
 `GET /twitter/:user` returns `{ profile }` for a public X profile: `id` (stable numeric id),
-`name`, `username`, `bio`, `avatarUrl`, `bannerUrl`, `url`, `website` (the linked site, expanded
-from the `t.co` wrapper), `location`, `createdAt` (ISO), `followerCount`, `followingCount`,
-`tweetCount`, `likeCount`, `mediaCount`, `listedCount`, and `verified` (X "blue" verification).
+`name`, `username`, `bio`, `avatarUrl`, `bannerUrl`, `url`, `website` (the linked site),
+`location`, `createdAt` (ISO), `followerCount`, `followingCount`, and `tweetCount`.
 
-There is no official-API key or login involved. Like x.com's own logged-out web client, the server
-activates a short-lived **guest token** (`POST /1.1/guest/activate.json`) and then calls the public
-`UserByScreenName` GraphQL endpoint with that token plus X's public web bearer token. Both are
-values x.com ships to every anonymous visitor — no secret is stored, so responses stay publicly
-cacheable just like the GitHub/npm ones.
+No official-API key, login, or token is involved. x.com server-renders the profile as
+[schema.org](https://schema.org) **JSON-LD** (a `ProfilePage` whose `mainEntity` is the `Person`)
+into the HTML for a plain browser `GET` of `https://x.com/<user>`, so the scraper just fetches that
+one page and parses the JSON-LD — the same approach as any public-page scrape here, and responses
+stay publicly cacheable like the GitHub/npm ones. A nonexistent handle still returns HTTP 200 but
+omits the `ProfilePage` block, which the parser treats as "not found" (404).
 
-Because this rides X's private web endpoints, it has two moving parts that X can change without
-notice: the `UserByScreenName` **query id** (rotated on web-app redeploys) and its required
-**feature flags**. Both live as constants in `packages/metrics-api-server/src/twitter/fetch.ts`;
-when X changes them the request starts failing and the **nightly smoke test** (`pnpm test:live`)
-flags it so the constants can be refreshed. X may also rate-limit or block requests coming from
-datacenter IP ranges (e.g. some serverless/CI hosts); if that shows up in production, route the
-outbound `fetch` through a proxy — the `fetchFn` is injectable, so it drops in without touching the
-parsing logic.
+Follower/following/tweet counts come from the JSON-LD's `interactionStatistic`. Fields that only
+exist in X's authenticated API (`likeCount`, `mediaCount`, `listedCount`, verified status) are
+**not** available from the public page and are intentionally omitted. If X changes the JSON-LD
+markup the scrape starts failing and the **nightly smoke test** (`pnpm test:live`) flags it. X may
+also rate-limit or block requests from datacenter IP ranges (e.g. some serverless/CI hosts); if
+that shows up in production, route the outbound `fetch` through a proxy — the `fetchFn` is
+injectable, so it drops in without touching the parsing logic.
 
 ## Caching
 
