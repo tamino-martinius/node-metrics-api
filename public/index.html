@@ -6,7 +6,7 @@
     <title>metrics-api</title>
     <meta
       name="description"
-      content="Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON."
+      content="Scrapes public GitHub, GitLab, X (Twitter) and LinkedIn profiles and aggregates npm registry stats into clean JSON."
     />
     <style>
       :root {
@@ -59,8 +59,8 @@
   <body>
     <h1>metrics-api</h1>
     <p class="lead">
-      Scrapes public GitHub profile pages and aggregates npm registry APIs into clean JSON — no
-      tokens, no auth.
+      Scrapes public GitHub, GitLab, X (Twitter) and LinkedIn profiles and aggregates npm registry
+      stats into clean JSON — no auth required for the base data.
     </p>
 
     <table>
@@ -72,16 +72,20 @@
       </thead>
       <tbody>
         <tr>
-          <td><code>GET /github/:user/contributions</code></td>
-          <td>per-day contribution counts + totals per year</td>
+          <td><code>GET /github/:user</code></td>
+          <td>profile, public repos, and contributions in one response (optional GitHub GraphQL enrichment)</td>
         </tr>
         <tr>
-          <td><code>GET /github/:user/profile</code></td>
-          <td>name, bio, avatar, follower/following counts, orgs</td>
+          <td><code>GET /gitlab/:user</code></td>
+          <td>profile, projects, and contributions (optional GitLab token enrichment)</td>
         </tr>
         <tr>
-          <td><code>GET /github/:user/repos</code></td>
-          <td>public repos with stars, forks, language</td>
+          <td><code>GET /twitter/:user</code></td>
+          <td>X (Twitter) profile: bio, follower/following/tweet counts, account age</td>
+        </tr>
+        <tr>
+          <td><code>GET /linkedin/:user</code></td>
+          <td>LinkedIn profile: headline, location, followers, plus recent posts/projects/articles</td>
         </tr>
         <tr>
           <td><code>GET /npm/:user</code></td>

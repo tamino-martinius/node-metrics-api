@@ -1,15 +1,26 @@
 // Local dev server mirroring vercel.json's rewrites. Usage: npx tsx scripts/dev-server.mjs [port]
 import { createServer } from 'node:http';
 import { GET as githubUser } from '../api/github/user.ts';
+import { GET as gitlabUser } from '../api/gitlab/user.ts';
+import { GET as linkedinUser } from '../api/linkedin/user.ts';
 import { GET as npmStats } from '../api/npm/stats.ts';
+import { GET as twitterUser } from '../api/twitter/user.ts';
 
 const PORT = Number(process.argv[2] ?? 8787);
 
+const routes = [
+  [/^\/github\/([^/]+)$/, githubUser],
+  [/^\/gitlab\/([^/]+)$/, gitlabUser],
+  [/^\/twitter\/([^/]+)$/, twitterUser],
+  [/^\/linkedin\/([^/]+)$/, linkedinUser],
+  [/^\/npm\/([^/]+)$/, npmStats],
+];
+
 const route = (pathname) => {
-  let match = pathname.match(/^\/github\/([^/]+)$/);
-  if (match) return { handler: githubUser, user: match[1] };
-  match = pathname.match(/^\/npm\/([^/]+)$/);
-  if (match) return { handler: npmStats, user: match[1] };
+  for (const [pattern, handler] of routes) {
+    const match = pathname.match(pattern);
+    if (match) return { handler, user: match[1] };
+  }
   return null;
 };
 

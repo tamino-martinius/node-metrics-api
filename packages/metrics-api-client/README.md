@@ -23,6 +23,9 @@ const user = await api.github('octocat');
 Other methods:
 
 ```ts
+const gitlab = await api.gitlab('tamino-martinius');           // { profile, projects, contributions }
+const twitter = await api.twitter('TaminoMartinius');          // { profile }
+const linkedin = await api.linkedin('tamino-martinius');       // { profile }
 const npmStats = await api.npmStats('octocat', { months: 6 }); // 1–17, default 12
 ```
 
@@ -50,6 +53,28 @@ Returns a `GithubUser`: `{ profile, repos, contributions, warnings? }`. `options
 ```ts
 const enriched = await api.github('octocat', { years: [2024, 2025], token: myPat, lifetime: true });
 ```
+
+### `gitlab(user, options?)`
+
+Returns a `GitlabUser`: `{ profile, projects, contributions, warnings? }`. Pass `{ token }` to send
+your own GitLab personal access token as `Authorization: Bearer <token>`, which enriches
+follower/following counts and adds `contributions.byType`; without it those are omitted (GitLab
+requires a token for follower data).
+
+```ts
+const gl = await api.gitlab('tamino-martinius', { token: myGitlabPat });
+```
+
+### `twitter(user)`
+
+Returns a `TwitterUser`: `{ profile }` for a public X profile — id, name, bio, follower/following/
+tweet counts, and account age. No token or options.
+
+### `linkedin(user)`
+
+Returns a `LinkedinUser`: `{ profile }` for a public LinkedIn profile — headline, location,
+followers, languages, employer, education, plus recent posts/projects/articles. `user` is the
+`/in/<slug>` vanity name. No token or options.
 
 ## Options
 
@@ -90,6 +115,7 @@ try {
 
 ## Types
 
-`GithubUser` and `NpmStats` are re-exported from `metrics-api-server` so consumers don't need a
-direct dependency on that package just for types. `GithubUser` includes the nested `profile`,
-`repos[]`, and `contributions` (with optional `byType`) shapes described above.
+`GithubUser`, `GitlabUser`, `TwitterUser`, `LinkedinUser`, and `NpmStats` are re-exported from
+`metrics-api-server` so consumers don't need a direct dependency on that package just for types.
+`GithubUser` includes the nested `profile`, `repos[]`, and `contributions` (with optional `byType`)
+shapes described above.

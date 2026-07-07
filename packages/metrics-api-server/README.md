@@ -1,11 +1,13 @@
 # metrics-api-server
 
-Scrapes public GitHub profile pages (contributions, profile, repos) and aggregates npm registry
-APIs into clean JSON, plus a small Web-standard handler factory for exposing them as HTTP
-endpoints (used by this repo's `api/*.ts` Vercel functions). No token is required — the scrapers
-work off public HTML/JSON that anyone's browser can already see. Optionally, a server-side
-`GITHUB_TOKEN` or a caller-supplied `Authorization` header can layer in extra data from GitHub's
-GraphQL API (see `getGithubUser` below).
+Scrapes public GitHub profile pages (contributions, profile, repos), reads public GitLab
+profiles/projects via the GitLab REST API, scrapes public X (Twitter) and LinkedIn profiles from
+their server-rendered JSON-LD, and aggregates npm registry APIs into clean JSON — plus a small
+Web-standard handler factory for exposing them as HTTP endpoints (used by this repo's `api/*.ts`
+Vercel functions). No token is required for the base data — the scrapers work off public HTML/JSON
+that anyone's browser can already see. Optionally, a server-side `GITHUB_TOKEN`/`GITLAB_TOKEN` or a
+caller-supplied `Authorization` header can layer in extra data (see `getGithubUser` /
+`getGitlabUser` below).
 
 ```bash
 npm install metrics-api-server
@@ -145,6 +147,78 @@ and returns a `GithubGraphqlData` (or `null` if GitHub has no such user). Classi
 or a GraphQL `RATE_LIMITED` error) so callers can distinguish "your token is bad" from "try again
 later."
 
+### `getGitlabUser(user, options?)` / `gitlabUserResponse(request, options?)`
+
+The GitLab equivalent of `getGithubUser`, reading gitlab.com's REST API (`/api/v4`) and the public
+contribution `calendar.json` rather than scraping HTML. It runs the profile, projects,
+contributions, and per-type enrichment in parallel via `Promise.allSettled` and merges them into
+one `GitlabUser` (`{ profile, projects, contributions, warnings? }`); the primary user lookup is
+anonymous, and a failed sub-fetch becomes a `warnings` entry instead of failing the whole call.
+
+```ts
+import { getGitlabUser } from 'metrics-api-server';
+
+const user = await getGitlabUser('tamino-martinius', {
+  serverToken: process.env.GITLAB_TOKEN, // optional — a GitLab PAT for the deployment
+  callerToken: undefined,                // optional — a caller's own GitLab PAT (takes priority)
+});
+```
+
+A token (caller takes priority over server) enriches follower/following counts and extra profile
+fields (`accountCreatedAt`, `location`, `jobTitle`, `organization`), and adds a per-type
+contribution tally (`contributions.byType`: `pushes`, `mergeRequests`, `issues`, `comments`).
+Without a token these are omitted — GitLab returns 403 for `/followers` anonymously, so
+follower/following default to 0. As with GitHub, a `GitlabTokenError` from a `callerToken` is
+rethrown (so the handler can return `401`), while a rejected `serverToken` degrades to a warning.
+
+`gitlabUserResponse(request, { serverToken?, fetchFn?, now? })` wraps `getGitlabUser` into a
+`(Request) => Promise<Response>` handler — this is what `api/gitlab/user.ts` uses. It reads the
+`user` param and a caller `Authorization: Bearer <token>` header, handles `OPTIONS` preflight, and
+sets response headers:
+
+- `200` — the merged `GitlabUser` as JSON. `public, s-maxage=3600, stale-while-revalidate=86400`
+  for anonymous/server-token-only responses, `private, no-store` with a caller token. Always
+  `vary: Authorization` and `access-control-allow-origin: *`.
+- `400` — invalid username, `no-store`.
+- `404` — `UserNotFoundError`, `public, s-maxage=300`.
+- `401` — the caller's own token was rejected (`GitlabTokenError`), `no-store`.
+- `429` — `GitlabRateLimitError`, `no-store`.
+- `502` — `GitlabApiError`, `no-store`.
+- `500` — anything else, `no-store`.
+
+### `getTwitterUser(user, options?)`
+
+Fetches `https://x.com/<user>` and parses the server-rendered schema.org JSON-LD (a `ProfilePage`
+whose `mainEntity` is a `Person`) into a `TwitterUser` (`{ profile }`) — no API key, login, or
+token. `profile` carries the stable numeric `id`, `name`, `username`, `bio`, `avatarUrl`,
+`bannerUrl`, `url`, `website`, `location`, `createdAt`, `followerCount`, `followingCount`, and
+`tweetCount`. A `404` throws `UserNotFoundError`; a nonexistent handle that returns 200 without the
+`ProfilePage` block, or any markup change, throws `ScrapeError`. Fields that only exist in X's
+authenticated API (likes, media, verified status) are intentionally omitted.
+
+```ts
+import { getTwitterUser } from 'metrics-api-server';
+
+const { profile } = await getTwitterUser('TaminoMartinius');
+```
+
+### `getLinkedinUser(user, options?)`
+
+Fetches `https://www.linkedin.com/in/<user>` and parses the public JSON-LD `@graph` `Person` node
+into a `LinkedinUser` (`{ profile }`). `profile` has `username`, `name`, `headline`, `avatarUrl`,
+`url`, `location`, `countryCode`, `followerCount`, `languages`, `companies`, and `education`, plus
+the public activity arrays `posts`, `projects`, and `articles` (each empty when absent). Values
+LinkedIn masks for logged-out viewers (e.g. past employers) are dropped. A `404` throws
+`UserNotFoundError`; LinkedIn's anti-bot `999` status (also returned to blocked datacenter IPs)
+throws `ScrapeError` — route the injectable `fetchFn` through a proxy if that affects your
+deployment.
+
+```ts
+import { getLinkedinUser } from 'metrics-api-server';
+
+const { profile } = await getLinkedinUser('tamino-martinius');
+```
+
 ## Errors
 
 - **`UserNotFoundError`** — thrown when GitHub responds 404 for a profile URL. Distinct from
@@ -163,6 +237,13 @@ later."
   (HTTP 403) or a GraphQL `RATE_LIMITED` error. `getGithubUser` always turns this into an
   `"enrichment: rate limited"` warning rather than failing the request, regardless of which token
   triggered it.
+- **`GitlabTokenError`** — thrown by the GitLab REST client when GitLab rejects a token (HTTP 401
+  or 403). `getGitlabUser` swallows it into a warning for a `serverToken` but rethrows it for a
+  `callerToken`, so `gitlabUserResponse` can surface it as `401`.
+- **`GitlabRateLimitError`** — thrown by the GitLab REST client on HTTP 429; `gitlabUserResponse`
+  maps it to `429`.
+- **`GitlabApiError`** — thrown for any other unexpected GitLab REST/calendar response (the GitLab
+  analogue of `ScrapeError`); `gitlabUserResponse` maps it to `502`.
 
 ## Injectable `fetchFn`
 

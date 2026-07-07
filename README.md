@@ -1,9 +1,10 @@
 # node-metrics-api
 
-Scrapes public GitHub profile pages, scrapes public X (Twitter) and LinkedIn profiles from their
-server-rendered JSON-LD, and aggregates npm registry APIs into clean JSON — no token or auth
-required for the base data. Optional GitHub GraphQL enrichment can layer in extra fields (see
-below). Deployed as Vercel functions at https://metrics-api.tamino.dev.
+Scrapes public GitHub profile pages, reads public GitLab profiles/projects via the GitLab REST
+API, scrapes public X (Twitter) and LinkedIn profiles from their server-rendered JSON-LD, and
+aggregates npm registry APIs into clean JSON — no token or auth required for the base data.
+Optional GitHub/GitLab token enrichment can layer in extra fields (see below). Deployed as Vercel
+functions at https://metrics-api.tamino.dev.
 
 Two packages:
 
@@ -17,6 +18,7 @@ Two packages:
 | Endpoint | Returns |
 | --- | --- |
 | `GET /github/:user?y=all\|last\|2024,2025` | `{ profile, repos, contributions, warnings? }` in one response |
+| `GET /gitlab/:user` | `{ profile, projects, contributions, warnings? }` — GitLab profile, projects, and contributions |
 | `GET /twitter/:user` | `{ profile }` — X profile with follower/following/tweet counts and account age |
 | `GET /linkedin/:user` | `{ profile }` — LinkedIn profile: headline, location, followers, languages, employer, education, plus recent posts/projects/articles |
 | `GET /npm/:user?months=12` | packages with publish history + windowed daily downloads |
@@ -42,6 +44,7 @@ Example:
 
 ```bash
 curl https://metrics-api.tamino.dev/github/tamino-martinius
+curl https://metrics-api.tamino.dev/gitlab/tamino-martinius
 curl https://metrics-api.tamino.dev/twitter/TaminoMartinius
 curl https://metrics-api.tamino.dev/linkedin/tamino-martinius
 curl https://metrics-api.tamino.dev/npm/tamino-martinius?months=6
@@ -77,6 +80,26 @@ Every response — enriched or not — carries `access-control-allow-origin: *` 
 `vary: Authorization`, and `OPTIONS` preflight requests are answered with
 `access-control-allow-headers: authorization` so browsers can send the `Authorization` header
 cross-origin.
+
+### GitLab
+
+`GET /gitlab/:user` returns `{ profile, projects, contributions, warnings? }` for a public
+gitlab.com user, read from the GitLab REST API (`/api/v4`) plus the public contribution
+`calendar.json` — no token required for the base data:
+
+- `profile` — name, username, bio, avatar, and URL. Follower/following counts are token-gated (0
+  when anonymous, since GitLab returns 403 for `/followers` without a token).
+- `projects` — public projects with stars, forks, language, fork status, and `visibility`.
+- `contributions` — per-day counts/levels for the rolling last year, plus `total.lastYear`.
+
+An optional GitLab personal access token — set server-side as `GITLAB_TOKEN`, or sent by the
+caller as `Authorization: Bearer <pat>` (the caller's token takes priority) — enriches the response
+with follower/following counts, extra profile fields (`accountCreatedAt`, `location`, `jobTitle`,
+`organization`), and a per-type contribution tally derived from the user's events (`byType`:
+`pushes`, `mergeRequests`, `issues`, `comments`). Enrichment is best-effort and mirrors the GitHub
+endpoint: if it fails the base data is still returned with a `warnings` entry, **except** that a
+*caller's* rejected token surfaces as `401`. Anonymous/server-token responses are edge-cached like
+the others; caller-token responses are `private, no-store`.
 
 ### X (Twitter)
 
@@ -166,6 +189,7 @@ scrapers directly instead of calling over HTTP.
 ```
 api/                         Vercel functions (thin wrappers around metrics-api-server)
   github/user.ts
+  gitlab/user.ts
   twitter/user.ts
   linkedin/user.ts
   npm/stats.ts
