@@ -25,3 +25,24 @@ export class GithubRateLimitError extends Error {
     this.name = 'GithubRateLimitError';
   }
 }
+
+export class GitlabTokenError extends Error {
+  constructor(message = 'gitlab token was rejected') {
+    super(message);
+    this.name = 'GitlabTokenError';
+  }
+}
+
+export class GitlabRateLimitError extends Error {
+  constructor(message = 'gitlab rate limit exceeded') {
+    super(message);
+    this.name = 'GitlabRateLimitError';
+  }
+}
+
+export class GitlabApiError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GitlabApiError';
+  }
+}

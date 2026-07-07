@@ -1,7 +1,15 @@
-import { GithubTokenError, ScrapeError, UserNotFoundError } from './errors.js';
+import {
+  GithubTokenError,
+  GitlabApiError,
+  GitlabRateLimitError,
+  GitlabTokenError,
+  ScrapeError,
+  UserNotFoundError,
+} from './errors.js';
 import { getGithubUser } from './github/user.js';
+import { getGitlabUser } from './gitlab/user.js';
 import type { FetchFn } from './types.js';
-import { isValidGithubUsername } from './validate.js';
+import { isValidGithubUsername, isValidGitlabUsername } from './validate.js';
 
 const json = (data: unknown, status: number, cacheControl: string): Response =>
   new Response(JSON.stringify(data), {
@@ -112,6 +120,34 @@ export async function githubUserResponse(
     // Log the error only — never the request headers/token.
     console.error('[metrics-api]', error);
     if (error instanceof ScrapeError) return respond({ error: error.message }, 502, 'no-store', vary);
+    return respond({ error: 'internal error' }, 500, 'no-store', vary);
+  }
+}
+
+export async function gitlabUserResponse(
+  request: Request,
+  { serverToken, fetchFn = fetch, now }: { serverToken?: string; fetchFn?: FetchFn; now?: Date } = {},
+): Promise<Response> {
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+
+  const url = new URL(request.url);
+  const user = url.searchParams.get('user') ?? '';
+  const vary = { vary: 'Authorization' };
+  if (!isValidGitlabUsername(user)) return respond({ error: 'invalid username' }, 400, 'no-store', vary);
+
+  const callerToken = parseBearer(request.headers.get('authorization'));
+  try {
+    const result = await getGitlabUser(user, { serverToken, callerToken, fetchFn, now });
+    const cacheControl = callerToken ? 'private, no-store' : 'public, s-maxage=3600, stale-while-revalidate=86400';
+    return respond(result, 200, cacheControl, vary);
+  } catch (error) {
+    if (error instanceof UserNotFoundError) return respond({ error: error.message }, 404, 'public, s-maxage=300', vary);
+    if (error instanceof GitlabTokenError)
+      return respond({ error: 'gitlab token was rejected' }, 401, 'no-store', vary);
+    if (error instanceof GitlabRateLimitError) return respond({ error: 'gitlab rate limited' }, 429, 'no-store', vary);
+    // Log the error only — never the request headers/token.
+    console.error('[metrics-api]', error);
+    if (error instanceof GitlabApiError) return respond({ error: error.message }, 502, 'no-store', vary);
     return respond({ error: 'internal error' }, 500, 'no-store', vary);
   }
 }
