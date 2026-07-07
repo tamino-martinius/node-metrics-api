@@ -1,6 +1,6 @@
 {
   "name": "metrics-api-server",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Scrape public GitHub profile data (contributions, profile, repos) and aggregate npm registry stats into clean JSON",
   "author": "Tamino Martinius <dev@zaku.eu>",
   "license": "MIT",

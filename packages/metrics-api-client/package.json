@@ -1,6 +1,6 @@
 {
   "name": "metrics-api-client",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Typed client for a hosted metrics-api-server (default https://metrics-api.tamino.dev)",
   "author": "Tamino Martinius <dev@zaku.eu>",
   "license": "MIT",
