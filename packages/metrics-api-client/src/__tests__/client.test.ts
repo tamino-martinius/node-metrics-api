@@ -80,4 +80,22 @@ describe('MetricsApiClient', () => {
     expect(error).toBeInstanceOf(MetricsApiError);
     expect((error as MetricsApiError).kind).toBe('network');
   });
+
+  it('builds the gitlab URL and sends the caller token', async () => {
+    const seen: Array<string | null> = [];
+    const calls: string[] = [];
+    const fetchFn = (async (url: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(String(url));
+      seen.push(new Headers(init?.headers).get('authorization'));
+      return new Response('{}', { status: 200 });
+    }) as typeof fetch;
+    const client = new MetricsApiClient({ fetch: fetchFn });
+    await client.gitlab('tamino-martinius');
+    await client.gitlab('tamino-martinius', { token: 'glpat_x' });
+    expect(calls).toEqual([
+      'https://metrics-api.tamino.dev/gitlab/tamino-martinius',
+      'https://metrics-api.tamino.dev/gitlab/tamino-martinius',
+    ]);
+    expect(seen).toEqual([null, 'Bearer glpat_x']);
+  });
 });

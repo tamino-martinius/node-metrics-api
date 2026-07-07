@@ -124,3 +124,53 @@ export interface GithubGraphqlData {
   lifetimeTotal?: number;
   rateLimit: { cost: number; remaining: number };
 }
+
+export interface GitlabByType {
+  pushes: number;
+  mergeRequests: number;
+  issues: number;
+  comments: number;
+}
+
+export interface GitlabContributions {
+  /** Rolling last-year total only: { lastYear: number }. */
+  total: Record<string, number>;
+  contributions: ContributionDay[];
+  byType?: GitlabByType;
+}
+
+export interface GitlabProfile {
+  name: string;
+  username: string;
+  bio: string;
+  avatarUrl: string;
+  url: string;
+  /** Token-gated; 0 when anonymous (GitLab returns 403 for /followers without a token). */
+  followerCount: number;
+  followingCount: number;
+  accountCreatedAt?: string;
+  location?: string | null;
+  jobTitle?: string;
+  organization?: string;
+}
+
+export interface GitlabProject {
+  name: string;
+  url: string;
+  description: string;
+  language: string | null;
+  stargazerCount: number;
+  forkCount: number;
+  isFork: boolean;
+  visibility: 'public' | 'internal' | 'private';
+  defaultBranchCommits?: number | null;
+  createdAt?: string;
+  lastActivityAt?: string;
+}
+
+export interface GitlabUser {
+  profile: GitlabProfile;
+  projects: GitlabProject[];
+  contributions: GitlabContributions;
+  warnings?: string[];
+}
