@@ -115,6 +115,66 @@ export interface TwitterUser {
   warnings?: string[];
 }
 
+export interface LinkedinEducation {
+  name: string;
+  startYear: number | null;
+  endYear: number | null;
+}
+
+export interface LinkedinPost {
+  text: string;
+  url: string;
+  /** ISO 8601 publish timestamp. */
+  publishedAt: string;
+  likeCount: number | null;
+}
+
+export interface LinkedinProject {
+  name: string;
+  /** External link (unwrapped from LinkedIn's redirect), or null. */
+  url: string | null;
+  description: string;
+}
+
+export interface LinkedinArticle {
+  headline: string;
+  url: string;
+  /** ISO 8601 publish timestamp. */
+  publishedAt: string;
+  likeCount: number | null;
+  imageUrl: string | null;
+}
+
+export interface LinkedinProfile {
+  /** Vanity slug from /in/<slug>. */
+  username: string;
+  name: string;
+  /** The profile headline / summary. */
+  headline: string;
+  avatarUrl: string | null;
+  /** Canonical profile URL. */
+  url: string;
+  location: string | null;
+  /** ISO 3166 country code (e.g. "DE"). */
+  countryCode: string | null;
+  followerCount: number | null;
+  languages: string[];
+  /** Employer names. Past employers LinkedIn masks for logged-out viewers are dropped. */
+  companies: string[];
+  education: LinkedinEducation[];
+  /** Recent shares/posts embedded in the public page. */
+  posts: LinkedinPost[];
+  /** Publications/projects (e.g. linked repos). */
+  projects: LinkedinProject[];
+  /** Long-form LinkedIn articles (Pulse). */
+  articles: LinkedinArticle[];
+}
+
+export interface LinkedinUser {
+  profile: LinkedinProfile;
+  warnings?: string[];
+}
+
 export interface GithubGraphqlData {
   accountCreatedAt: string;
   location: string | null;

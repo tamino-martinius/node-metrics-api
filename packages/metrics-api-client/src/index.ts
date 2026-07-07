@@ -1,6 +1,6 @@
-import type { GithubUser, GitlabUser, NpmStats, TwitterUser } from 'metrics-api-server';
+import type { GithubUser, GitlabUser, LinkedinUser, NpmStats, TwitterUser } from 'metrics-api-server';
 
-export type { GithubUser, GitlabUser, NpmStats, TwitterUser };
+export type { GithubUser, GitlabUser, LinkedinUser, NpmStats, TwitterUser };
 
 export const DEFAULT_BASE_URL = 'https://metrics-api.tamino.dev';
 
@@ -75,5 +75,9 @@ export class MetricsApiClient {
 
   twitter(user: string): Promise<TwitterUser> {
     return this.#get(`/twitter/${encodeURIComponent(user)}`);
+  }
+
+  linkedin(user: string): Promise<LinkedinUser> {
+    return this.#get(`/linkedin/${encodeURIComponent(user)}`);
   }
 }
